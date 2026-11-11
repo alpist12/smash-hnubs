@@ -1,0 +1,21 @@
+import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { DEFAULT_ITEMS, ITEMS, WORLD } from '../src/data/room';
+import { applyLayout } from '../src/data/layout';
+import { readGLBLayout } from './glb-layout';
+
+const file = process.argv[2] ?? 'public/models/hnubs-edited.glb';
+const target = resolve('src/data/layout.json');
+const previous = await readFile(target, 'utf8');
+const hidden = Object.fromEntries(Object.entries(JSON.parse(previous)).filter(([, entry]) => (entry as { hidden?: boolean }).hidden));
+const layout = file === '--reset' ? {} : { ...hidden, ...readGLBLayout(await readFile(file), ITEMS, WORLD) };
+applyLayout(DEFAULT_ITEMS, layout);
+await mkdir('work/layout-backups', { recursive: true });
+await writeFile(`work/layout-backups/layout-${Date.now()}.json`, previous);
+await writeFile(`${target}.tmp`, JSON.stringify(layout, null, 2) + '\n');
+await rename(`${target}.tmp`, target);
+console.log(`배치 반영: ${Object.keys(layout).length}개 가구. 원본 배치는 work/layout-backups에 백업했습니다.`);
+execFileSync(process.execPath, [resolve('node_modules/typescript/bin/tsc'), '-b'], { stdio: 'inherit' });
+execFileSync(process.execPath, [resolve('node_modules/vite/bin/vite.js'), 'build'], { stdio: 'inherit' });
+console.log('빌드 완료. http://localhost:4173 게임 탭을 새로고침하면 새 배치를 사용합니다.');

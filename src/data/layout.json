@@ -1,0 +1,811 @@
+{
+  "desk-1": {
+    "pos": [
+      -1.615385,
+      0,
+      -2.709809
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "monitor-2": {
+    "pos": [
+      -1.615385,
+      0.8,
+      -2.649809
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-1"
+  },
+  "keyboard-3": {
+    "pos": [
+      -1.615385,
+      0.8,
+      -2.989809
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-1"
+  },
+  "mouse-4": {
+    "pos": [
+      -1.255385,
+      0.8,
+      -2.989809
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-1"
+  },
+  "cup-5": {
+    "pos": [
+      -1.965385,
+      0.8,
+      -2.659809
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-1"
+  },
+  "book-6": {
+    "pos": [
+      -1.115385,
+      0.8,
+      -2.589809
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-1"
+  },
+  "desk-7": {
+    "pos": [
+      3.05,
+      0,
+      -2.75
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "monitor-8": {
+    "pos": [
+      3.05,
+      0.8,
+      -2.5
+    ],
+    "rotation": 9.424777960769374,
+    "scale": 1,
+    "parentId": "desk-7"
+  },
+  "keyboard-9": {
+    "pos": [
+      3.05,
+      0.8,
+      -3
+    ],
+    "rotation": 6.2831853071795845,
+    "scale": 1,
+    "parentId": "desk-7"
+  },
+  "mouse-10": {
+    "pos": [
+      2.75,
+      0.8,
+      -3
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-7"
+  },
+  "cup-11": {
+    "pos": [
+      3.4,
+      0.8,
+      -2.8
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-7"
+  },
+  "book-12": {
+    "pos": [
+      2.55,
+      0.8,
+      -2.87
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-7"
+  },
+  "chair-13": {
+    "pos": [
+      4.6,
+      0,
+      -3.758856
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "desk-14": {
+    "pos": [
+      4.65,
+      0,
+      -2.758856
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "monitor-15": {
+    "pos": [
+      4.65,
+      0.8,
+      -2.698856
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-14"
+  },
+  "keyboard-16": {
+    "pos": [
+      4.65,
+      0.8,
+      -3.038856
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-14"
+  },
+  "mouse-17": {
+    "pos": [
+      5.01,
+      0.8,
+      -3.038856
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-14"
+  },
+  "cup-18": {
+    "pos": [
+      4.3,
+      0.8,
+      -2.708856
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-14"
+  },
+  "book-19": {
+    "pos": [
+      5.15,
+      0.8,
+      -2.638856
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-14"
+  },
+  "desk-26": {
+    "pos": [
+      0.5,
+      0,
+      3.862398
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "coffee-27": {
+    "pos": [
+      1.1,
+      0.8,
+      3.892398
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-26"
+  },
+  "microwave-28": {
+    "pos": [
+      0.26,
+      0.8,
+      3.902398
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "desk-26"
+  },
+  "snack-29": {
+    "pos": [
+      0.78,
+      0.8,
+      3.612398
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-26"
+  },
+  "snack-30": {
+    "pos": [
+      0.32,
+      0.8,
+      3.612398
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-26"
+  },
+  "snack-31": {
+    "pos": [
+      -0.18,
+      0.8,
+      3.612398
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-26"
+  },
+  "cup-32": {
+    "pos": [
+      1.15,
+      0.8,
+      3.612398
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-26"
+  },
+  "desk-33": {
+    "pos": [
+      4.35,
+      0,
+      3.05
+    ],
+    "rotation": 6.2831853071795845,
+    "scale": 1
+  },
+  "monitor-34": {
+    "pos": [
+      4.35,
+      0.8,
+      2.894959
+    ],
+    "rotation": 6.283185307179586,
+    "scale": 1,
+    "parentId": "desk-33"
+  },
+  "keyboard-35": {
+    "pos": [
+      4.35,
+      0.8,
+      3.244959
+    ],
+    "rotation": 9.424777960769376,
+    "scale": 1,
+    "parentId": "desk-33"
+  },
+  "mouse-36": {
+    "pos": [
+      4.71,
+      0.8,
+      3.2
+    ],
+    "rotation": 3.1415926535897913,
+    "scale": 1,
+    "parentId": "desk-33"
+  },
+  "cup-37": {
+    "pos": [
+      4,
+      0.8,
+      3.1
+    ],
+    "rotation": 3.1415926535897913,
+    "scale": 1,
+    "parentId": "desk-33"
+  },
+  "book-38": {
+    "pos": [
+      4.85,
+      0.8,
+      3.17
+    ],
+    "rotation": 3.1415926535897913,
+    "scale": 1,
+    "parentId": "desk-33"
+  },
+  "chair-39": {
+    "pos": [
+      4.4,
+      0,
+      3.880041
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "desk-40": {
+    "pos": [
+      5.394775,
+      0,
+      3.05
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1
+  },
+  "monitor-41": {
+    "pos": [
+      5.334775,
+      0.8,
+      3.05
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "parentId": "desk-40"
+  },
+  "keyboard-42": {
+    "pos": [
+      5.674775,
+      0.8,
+      3.05
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "parentId": "desk-40"
+  },
+  "mouse-43": {
+    "pos": [
+      5.674775,
+      0.8,
+      3.41
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-40"
+  },
+  "cup-44": {
+    "pos": [
+      5.344775,
+      0.8,
+      2.7
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-40"
+  },
+  "book-45": {
+    "pos": [
+      5.274775,
+      0.8,
+      3.55
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-40"
+  },
+  "sofa-46": {
+    "pos": [
+      -1.65,
+      0,
+      -1.9
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "sofa-47": {
+    "pos": [
+      4.25,
+      0,
+      -1.45
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1
+  },
+  "table-48": {
+    "pos": [
+      1.005806,
+      0,
+      0.870572
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "bench-49": {
+    "pos": [
+      0.95,
+      0,
+      -0.15
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "bench-50": {
+    "pos": [
+      1.005806,
+      0,
+      1.9
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "sofa-51": {
+    "pos": [
+      -1.05,
+      0,
+      0.8
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1
+  },
+  "laptop-52": {
+    "pos": [
+      0.745806,
+      0.8,
+      0.45
+    ],
+    "rotation": 3.1415926535897936,
+    "scale": 1,
+    "parentId": "table-48"
+  },
+  "laptop-53": {
+    "pos": [
+      1.8,
+      0.8,
+      1.25
+    ],
+    "rotation": 6.2831853071795845,
+    "scale": 1,
+    "parentId": "table-48"
+  },
+  "cup-54": {
+    "pos": [
+      1.415806,
+      0.8,
+      0.510572
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "table-48"
+  },
+  "book-55": {
+    "pos": [
+      0.275806,
+      0.8,
+      1.110572
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "table-48"
+  },
+  "fridge-56": {
+    "pos": [
+      -0.9,
+      0,
+      3.95
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "cabinet-57": {
+    "pos": [
+      -6.72,
+      0,
+      -1
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1
+  },
+  "wardrobe-58": {
+    "pos": [
+      -6.65,
+      0,
+      -3.7
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1
+  },
+  "wardrobe-59": {
+    "pos": [
+      -6.65,
+      0,
+      -1.8
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1
+  },
+  "shelf-60": {
+    "pos": [
+      2.8,
+      0,
+      4.27
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "printer-61": {
+    "pos": [
+      5.15,
+      0,
+      1.2
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1
+  },
+  "stand-62": {
+    "pos": [
+      -2.75,
+      0,
+      -1.7
+    ],
+    "rotation": -6.021385919380435,
+    "scale": 1
+  },
+  "copy-desk-14-1": {
+    "pos": [
+      5.05,
+      0,
+      -1.5
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "desk-14"
+  },
+  "copy-monitor-15-1": {
+    "pos": [
+      4.99,
+      0.8,
+      -1.5
+    ],
+    "rotation": 7.853981633974479,
+    "scale": 1,
+    "sourceId": "monitor-15",
+    "parentId": "copy-desk-14-1"
+  },
+  "copy-keyboard-16-1": {
+    "pos": [
+      5.33,
+      0.8,
+      -1.5
+    ],
+    "rotation": 7.853981633974479,
+    "scale": 1,
+    "sourceId": "keyboard-16",
+    "parentId": "copy-desk-14-1"
+  },
+  "copy-mouse-17-1": {
+    "pos": [
+      5.33,
+      0.8,
+      -1.14
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "mouse-17",
+    "parentId": "copy-desk-14-1"
+  },
+  "copy-cup-18-1": {
+    "pos": [
+      5,
+      0.8,
+      -1.85
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "cup-18",
+    "parentId": "copy-desk-14-1"
+  },
+  "copy-book-19-1": {
+    "pos": [
+      4.93,
+      0.8,
+      -1
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "book-19",
+    "parentId": "copy-desk-14-1"
+  },
+  "copy-desk-14-2": {
+    "pos": [
+      5.05,
+      0,
+      0.05
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "desk-14"
+  },
+  "copy-monitor-15-2": {
+    "pos": [
+      4.99,
+      0.8,
+      0.05
+    ],
+    "rotation": 7.853981633974479,
+    "scale": 1,
+    "sourceId": "monitor-15",
+    "parentId": "copy-desk-14-2"
+  },
+  "copy-keyboard-16-2": {
+    "pos": [
+      5.33,
+      0.8,
+      0.05
+    ],
+    "rotation": 7.853981633974479,
+    "scale": 1,
+    "sourceId": "keyboard-16",
+    "parentId": "copy-desk-14-2"
+  },
+  "copy-mouse-17-2": {
+    "pos": [
+      5.33,
+      0.8,
+      0.41
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "mouse-17",
+    "parentId": "copy-desk-14-2"
+  },
+  "copy-cup-18-2": {
+    "pos": [
+      5,
+      0.8,
+      -0.3
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "cup-18",
+    "parentId": "copy-desk-14-2"
+  },
+  "copy-book-19-2": {
+    "pos": [
+      4.93,
+      0.8,
+      0.55
+    ],
+    "rotation": 4.71238898038469,
+    "scale": 1,
+    "sourceId": "book-19",
+    "parentId": "copy-desk-14-2"
+  },
+  "copy-chair-39-1": {
+    "pos": [
+      6.15,
+      0,
+      3.05
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1,
+    "sourceId": "chair-39"
+  },
+  "copy-chair-39-2": {
+    "pos": [
+      6,
+      0,
+      0.1
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1,
+    "sourceId": "chair-39"
+  },
+  "copy-chair-39-3": {
+    "pos": [
+      5.95,
+      0,
+      -1.6
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1,
+    "sourceId": "chair-39"
+  },
+  "copy-chair-13-1": {
+    "pos": [
+      3.05,
+      0,
+      -3.75
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "sourceId": "chair-13"
+  },
+  "copy-chair-13-2": {
+    "pos": [
+      -1.55,
+      0,
+      -3.6
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "sourceId": "chair-13"
+  },
+  "copy-wardrobe-59-1": {
+    "pos": [
+      -6.65,
+      0,
+      -2.75
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "sourceId": "wardrobe-59"
+  },
+  "copy-cabinet-57-1": {
+    "pos": [
+      -6.7,
+      0,
+      -0.3
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "sourceId": "cabinet-57"
+  },
+  "copy-cabinet-57-2": {
+    "pos": [
+      -6.7,
+      0,
+      0.4
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "sourceId": "cabinet-57"
+  },
+  "desk-20": {
+    "pos": [
+      5.394775036284471,
+      0,
+      -0.6253405994550408
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1,
+    "hidden": true
+  },
+  "monitor-21": {
+    "pos": [
+      5.334775036284471,
+      0.8,
+      -0.6253405994550408
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "hidden": true
+  },
+  "keyboard-22": {
+    "pos": [
+      5.674775036284471,
+      0.8,
+      -0.6253405994550408
+    ],
+    "rotation": 1.5707963267948966,
+    "scale": 1,
+    "hidden": true
+  },
+  "mouse-23": {
+    "pos": [
+      5.674775036284471,
+      0.8,
+      -0.26534059945504085
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "hidden": true
+  },
+  "cup-24": {
+    "pos": [
+      5.344775036284471,
+      0.8,
+      -0.9753405994550408
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "hidden": true
+  },
+  "book-25": {
+    "pos": [
+      5.2747750362844705,
+      0.8,
+      -0.12534059945504084
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "hidden": true
+  }
+}

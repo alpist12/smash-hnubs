@@ -1,0 +1,1 @@
+export default { id: 'bomb', label: '폭탄', short: '폭탄', key: '2', power: 230, impulse: 24, radius: 3.1, cooldown: 1.25, color: '#e9a26c', description: '원하는 곳에 설치 · 0.8초 뒤 광역 폭발' } as const;

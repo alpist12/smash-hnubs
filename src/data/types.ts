@@ -1,0 +1,8 @@
+export type V3 = [number, number, number];
+export type Kind = 'desk' | 'chair' | 'monitor' | 'laptop' | 'sofa' | 'bench' | 'printer' | 'stand' | 'cabinet' | 'wardrobe' | 'fridge' | 'microwave' | 'coffee' | 'snack' | 'shelf' | 'table' | 'cup' | 'book' | 'keyboard' | 'mouse' | 'panel' | 'light' | 'partition' | 'mixer' | 'microphone' | 'speaker' | 'rack' | 'mediaCabinet' | 'carton' | 'anchorDesk' | 'metalCabinet' | 'floorSofa' | 'paSpeaker' | 'metalShelf' | 'extinguisher' | 'foldingChair' | 'sledChair' | 'micStand' | 'ottoman' | 'floorCushion' | 'sideTable' | 'ampRack' | 'headphones' | 'equipmentStack';
+export type Finish = 'wood' | 'metal' | 'black' | 'screen' | 'fabric' | 'leather' | 'paper' | 'white' | 'glass';
+export interface Part { name: string; pos: V3; size: V3; finish: Finish; color?: string; round?: number; rotation?: V3; shape?: 'box' | 'cylinder'; collider?: boolean }
+export interface Item { id: string; kind: Kind; pos: V3; rotation?: number; color?: string; width?: number; depth?: number; height?: number; broadcastDesk?: boolean; fixed?: boolean; snackCounter?: boolean; scale?: number; curved?: boolean; trim?: string; sourceId?: string; parentId?: string }
+export interface Spec { label: string; mass: number; threshold: number; score: number; collision: number }
+export interface Debris { id: number; part: Part; pos: V3; rotation: [number, number, number, number]; impulse: V3; mass: number; born: number }
+export interface Effect { id: number; type: 'bat' | 'bomb' | 'laser' | 'sonic' | 'missile' | 'fuse' | 'rocket' | 'shatter'; point: V3; born: number; radius: number; from?: V3; duration?: number; colors?: string[] }
