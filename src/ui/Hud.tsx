@@ -86,13 +86,13 @@ export function Hud() {
           <button title="조작 도움말" aria-label="조작 도움말" onClick={() => setHelp(true)}><Icon name="help" size={20}/><span>조작법</span></button>
         </div>
       </div>
-      <p className="credits">HNUBS 방송국 실내 사진 기반 재구성 · 치수는 추정값 · 드래그 회전 · 휠 확대 · 우클릭 이동</p>
+      <p className="credits">HNUBS 방송국 실내 사진 기반 재구성 · 드래그 회전 · 휠 확대 · 우클릭/WASD 이동 · Q/E 회전</p>
     </footer>
     {hint && <div className="toast" role="status">{hint}</div>}
     {(!ready || restoring) && <div className="loading" role="status"><div className="loading-mark"/><strong>{restoring ? '방송국 복구 중' : '방송국 문을 여는 중'}</strong><span>3D 공간과 물리 엔진을 준비합니다</span></div>}
     {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section className="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={e => e.stopPropagation()}>
       <button autoFocus className="close" aria-label="도움말 닫기" onClick={() => setHelp(false)}><Icon name="close"/></button><h2 id="help-title">방송국 부수기</h2><p>물체를 클릭하거나 터치해 공격하세요.<br/>큰 가구는 여러 번 타격하면 부품으로 분리됩니다.</p>
-      <dl><dt>카메라 회전</dt><dd>마우스 드래그 / 한 손가락</dd><dt>확대·이동</dt><dd>휠·우클릭 / 두 손가락</dd><dt>무기 선택</dt><dd>1 배트 · 2 폭탄 · 3 레이저 · 4 음파 · 5 미사일</dd><dt>지속 레이저</dt><dd>물체를 누른 채로 조준</dd><dt>빠른 복구 / 시점</dt><dd>R / F</dd></dl>
+      <dl><dt>카메라 회전</dt><dd>마우스 드래그 / 한 손가락</dd><dt>확대·이동</dt><dd>휠·우클릭 / 두 손가락</dd><dt>키보드 이동</dt><dd>WASD·방향키 이동 · Q/E 회전 · Shift 빠르게</dd><dt>무기 선택</dt><dd>1 배트 · 2 폭탄 · 3 레이저 · 4 음파 · 5 미사일</dd><dt>지속 레이저</dt><dd>물체를 누른 채로 조준</dd><dt>빠른 복구 / 시점</dt><dd>R / F</dd></dl>
       <p className="note">사진의 가구 형태와 제공된 평면도를 기준으로 재구성했습니다. 실측 치수와 미표기 수납장 위치는 추정값입니다. 기술부스·아나부스는 실내 사진을 보고 배치했습니다.</p>
       <button className="primary" onClick={() => setHelp(false)}>이제 부숴볼까요</button>
     </section></div>}

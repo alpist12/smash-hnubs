@@ -14,7 +14,8 @@ interface State {
 }
 export const useGame = create<State>((set, get) => ({
   weapon: 'bat', score: 0, best: loadBest(), destroyed: {}, round: 0, effects: [], debris: [], sound: false,
-  quality: 'high',
+  // 휴대폰·태블릿(터치 위주 기기)은 가벼운 그래픽으로 시작한다.
+  quality: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 'low' : 'high',
   walls: true, ceiling: false, cameraRequest: 0, cameraMode: 'home', hovered: '', hint: '', ready: false,
   select: (weapon) => set({ weapon }),
   destroy: (id, points) => {
