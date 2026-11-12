@@ -1,1 +1,1 @@
-export default { id: 'sonic', label: '방송국 음파', short: '음파', key: '4', power: 125, impulse: 18, radius: 4.2, cooldown: 1.5, color: '#8dc2c0', description: 'HNUBS ON AIR · 넓게 퍼지는 원형 충격파' } as const;
+export default { id: 'sonic', label: '방송국 음파', short: '음파', key: '4', power: 125, impulse: 18, radius: 4.2, cooldown: 1.5, color: '#8dc2c0', description: 'HNUBS ON AIR · 넓게 퍼지는 원형 충격파', knockback: 4.5, lift: 0.3 } as const;

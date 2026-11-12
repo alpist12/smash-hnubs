@@ -4,7 +4,7 @@ import { useGame } from '../game/store';
 import { playImpact } from '../game/audio';
 import type { V3 } from '../data/types';
 
-export interface Target { point: () => Vector3; hit: (damage: number, impulse: V3, point: V3) => void }
+export interface Target { point: () => Vector3; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number) => void }
 export const targets = new Map<string, Target>();
 export const aim = { point: [0, .78, .4] as V3, target: '', holding: false, last: -10, shake: 0, camera: [8, 8.5, 10.5] as V3 };
 let serial = 0;
@@ -19,8 +19,9 @@ function detonate(weapon: WeaponId, point: V3, selected: string) {
     const position = target.point(), distance = position.distanceTo(center);
     const strength = id === selected ? 1 : falloff(distance, config.radius);
     if (strength <= 0) continue;
-    const dir = position.sub(center); dir.y = Math.max(.35, dir.y + .65); dir.normalize();
-    target.hit(config.power * strength, dir.multiplyScalar(config.impulse * strength).toArray() as V3, point);
+    // 무기마다 위로 띄우는 정도와 최대 밀려나는 속도를 다르게 한다 (배트는 낮고 짧게).
+    const dir = position.sub(center); dir.y = Math.max(config.lift, dir.y * .5 + config.lift); dir.normalize();
+    target.hit(config.power * strength, dir.multiplyScalar(config.impulse * strength).toArray() as V3, point, config.knockback * Math.max(.35, strength));
   }
   state.addEffect({ id: nextEffectId(), type: weapon, point, born: performance.now(), radius: config.radius });
   aim.shake = weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;

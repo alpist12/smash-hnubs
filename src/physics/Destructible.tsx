@@ -12,8 +12,13 @@ import { aim, attack, targets, nextEffectId } from './attacks';
 
 export const Destructible = memo(function Destructible({ item }: { item: Item }) {
   const body = useRef<RapierRigidBody>(null), damage = useRef(0), broken = useRef(false), lastContact = useRef(0);
-  const [stage, setStage] = useState(0);
+  const [stage, setStage] = useState(0), stageRef = useRef(0), lastChip = useRef(0);
   const parts = useMemo(() => model(item), [item]);
+  // 조각 색: 유리·화면을 뺀 가장 큰 부품들의 색.
+  const chipColors = useMemo(() => {
+    const colors = [...new Set(parts.filter(p => p.finish !== 'glass' && p.finish !== 'screen').sort((a, b) => b.size[0] * b.size[1] * b.size[2] - a.size[0] * a.size[1] * a.size[2]).slice(0, 4).map(p => p.color ?? '#9a9a90'))];
+    return colors.length ? colors : ['#9a9a90'];
+  }, [parts]);
   const spec = specs[item.kind], spawned = useRef(performance.now());
   const round = useGame(s => s.round), ceiling = useGame(s => s.ceiling), walls = useGame(s => s.walls);
 
@@ -21,19 +26,40 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     const rb = body.current;
     if (!rb) return;
     if (!item.fixed) rb.sleep();
+    stageRef.current = 0;
     const centerY = (Math.min(...parts.map(p => p.pos[1] - p.size[1] / 2)) + Math.max(...parts.map(p => p.pos[1] + p.size[1] / 2))) / 2;
     const point = () => { const t = rb.translation(), r = rb.rotation(); return new Vector3(0, centerY * (item.scale ?? 1), 0).applyQuaternion(new Quaternion(r.x, r.y, r.z, r.w)).add(t); };
-    const hit = (amount: number, impulse: V3, location: V3) => {
+    const hit = (amount: number, impulse: V3, location: V3, maxSpeed = 3) => {
       if (broken.current || amount < .1) return;
       if (item.kind === 'light' && !useGame.getState().ceiling) return;
       if (item.kind === 'panel' && !useGame.getState().walls) return;
       damage.current += amount;
-      setStage(Math.min(3, Math.ceil(damage.current / spec.threshold * 3)));
+      const nextStage = Math.min(3, Math.ceil(damage.current / spec.threshold * 3));
+      // 맞을 때마다 맞은 자리에서 작은 조각이 떨어져 나간다 (부서지기 전에도 조각조각).
+      const now = performance.now(), stageUp = nextStage > stageRef.current;
+      if (damage.current < spec.threshold && (stageUp || (amount >= 20 && now - lastChip.current > 110))) {
+        lastChip.current = now;
+        const count = Math.max(stageUp ? 4 : 2, Math.min(7, Math.round(amount / 12)));
+        const high = useGame.getState().quality === 'high', palette = chipColors;
+        const chips: Debris[] = Array.from({ length: high ? count : Math.ceil(count / 2) }, (_, i) => {
+          const r = (n: number) => ((item.id.length * 131 + now * 7 + i * n) % 1000) / 1000;
+          const size: V3 = [.06 + r(17) * .12, .03 + r(29) * .06, .06 + r(41) * .11];
+          const out = new Vector3(...location).sub(point()).setY(0); if (out.lengthSq() < 1e-4) out.set(r(3) - .5, 0, r(5) - .5); out.normalize();
+          const speed = Math.min(maxSpeed + .6, 2.4) * (.6 + r(53) * .7);
+          return { id: nextEffectId(), part: { name: `${spec.label} 조각`, pos: [0, 0, 0], size, finish: 'paper', color: palette[i % palette.length], round: .004 }, pos: [location[0] + out.x * .05, Math.max(.06, location[1]), location[2] + out.z * .05], rotation: [r(7) - .5, r(11) - .5, r(13) - .5, 1].map((v, _k, a) => v / Math.hypot(...a)) as [number, number, number, number], impulse: [out.x * speed + (r(19) - .5), 1.2 + r(23) * 1.4, out.z * speed + (r(31) - .5)], mass: .05, born: now + i };
+        });
+        useGame.getState().addDebris(chips);
+      }
+      stageRef.current = nextStage;
+      setStage(nextStage);
       if (!item.fixed) {
         rb.wakeUp();
-        const gain = Math.sqrt(spec.mass) * .45;
-        rb.applyImpulse({ x: impulse[0] * gain, y: impulse[1] * gain, z: impulse[2] * gain }, true);
-        rb.applyTorqueImpulse({ x: impulse[2] * .12, y: impulse[0] * .1, z: -impulse[0] * .15 }, true);
+        // 가벼운 물건이 총알처럼 튀지 않도록 속도 변화(Δv)를 무기별 상한으로 자른다.
+        const gain = Math.sqrt(spec.mass) * .45, length = Math.hypot(...impulse) || 1;
+        const dv = Math.min(length * gain / spec.mass, maxSpeed), scale = dv * spec.mass / length;
+        rb.applyImpulse({ x: impulse[0] * scale, y: impulse[1] * scale, z: impulse[2] * scale }, true);
+        const spin = Math.min(1, maxSpeed / 4) * spec.mass * .04;
+        rb.applyTorqueImpulse({ x: impulse[2] / length * spin, y: impulse[0] / length * spin * .6, z: -impulse[0] / length * spin }, true);
       }
       if (damage.current < spec.threshold) return;
       broken.current = true;
@@ -55,7 +81,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         if (part.rotation) local.setFromEuler(new Euler(...part.rotation));
         const rotQ = q.clone().multiply(local);
         const direction = p.clone().sub(new Vector3(...location)); direction.y += .6; direction.normalize();
-        const kick = direction.multiplyScalar(Math.min(5, 1.2 + amount / 60) * (.75 + (index * 37 % 10) / 20));
+        const kick = direction.multiplyScalar(Math.min(5, maxSpeed + .8, 1.2 + amount / 60) * (.75 + (index * 37 % 10) / 20));
         return { id: nextEffectId(), part: { ...part, pos: [0, 0, 0], size: part.size.map(n => n * scale) as V3, rotation: undefined }, pos: p.toArray() as V3, rotation: rotQ.toArray(), impulse: [kick.x + Math.max(-1.5, Math.min(1.5, impulse[0] * .06)), kick.y + .4, kick.z + Math.max(-1.5, Math.min(1.5, impulse[2] * .06))], mass: Math.max(.1, spec.mass / major.length), born: performance.now() + index };
       });
       useGame.getState().addDebris(debris);
