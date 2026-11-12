@@ -64,7 +64,15 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         if (need > 0 && pieces.length > 1) {
           const pick = pieces.map((piece, i) => ({ i, d: new Vector3(...piece.pos).distanceToSquared(local) })).filter(({ i }) => !removedRef.current.includes(i)).sort((x, y) => x.d - y.d).slice(0, need).map(({ i }) => i);
           useGame.getState().addDebris(pick.map((i, k) => pieceDebris(pieces[i], q, origin, scale, location, Math.min(maxSpeed + .8, 3), now + k)));
-          removedRef.current = [...removedRef.current, ...pick]; setRemoved(removedRef.current);
+          removedRef.current = [...removedRef.current, ...pick];
+          // 받쳐 주는 조각이 없어져 공중에 뜬 조각은 그대로 떨어진다(물리 법칙).
+          const floating = unsupported(pieces, removedRef.current, !!item.fixed);
+          if (floating.length) {
+            useGame.getState().addDebris(floating.map((i, k) => pieceDebris(pieces[i], q, origin, scale, location, .35, now + 50 + k)));
+            removedRef.current = [...removedRef.current, ...floating];
+          }
+          setRemoved(removedRef.current);
+          if (!item.fixed) rb.wakeUp();
         }
         // 2) 맞을 때마다 부스러기 가루가 흩날린다.
         if (amount >= 6 && now - lastDust.current > 90) { lastDust.current = now; useGame.getState().addEffect({ id: nextEffectId(), type: 'dust', point: [...location], born: now, radius: Math.min(1, .25 + amount / 120), colors: chipColors }); }
@@ -118,6 +126,8 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     useGame.setState({ hovered: `${spec.label}${stage > 0 ? ` · 손상 ${Math.min(99, Math.round(damage.current / spec.threshold * 100))}%` : ''}` });
   }
   if (stage === 4) return null;
+  // 조각이 떨어지기 시작하면 충돌 모양도 남은 조각으로 바꿔, 받침이 사라진 물건은 실제로 기울거나 넘어진다.
+  const colliderParts = removed.length ? pieces.filter((piece, i) => !removed.includes(i) && piece.collider !== false) : parts.filter(p => p.collider !== false);
   return <RigidBody ref={body} name={item.id} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1} type={item.fixed ? 'fixed' : 'dynamic'} colliders={false} canSleep linearDamping={.5} angularDamping={.7} friction={.65} restitution={.12}
     onContactForce={event => {
       const now = performance.now();
@@ -128,7 +138,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         targets.get(item.id)?.hit(Math.min(30, (impact - spec.collision) * .3), [0, .1, 0], targets.get(item.id)!.point().toArray() as V3, 1, true);
       }
     }}>
-    {parts.filter(p => p.collider !== false).map((part, index) => <CuboidCollider key={index} args={part.size.map(n => Math.max(.008, n / 2)) as V3} position={part.pos} rotation={part.rotation} mass={spec.mass / parts.length} collisionGroups={FURNITURE_GROUPS} />)}
+    {colliderParts.map((part, index) => <CuboidCollider key={`${removed.length}:${index}`} args={part.size.map(n => Math.max(.008, n / 2)) as V3} position={part.pos} rotation={part.rotation} mass={spec.mass / colliderParts.length} collisionGroups={FURNITURE_GROUPS} />)}
     <group ref={view} visible={item.kind !== 'light' || ceiling} name={`model:${item.id}`} onPointerMove={onAim} onPointerOver={onAim} onPointerOut={() => { if (aim.target === item.id) { aim.target = ''; useGame.setState({ hovered: '' }); } }}
       onPointerDown={e => { if (!shown.current) return; onAim(e); if (useGame.getState().weapon === 'laser' && e.button === 0) { aim.holding = true; attack(aim.point, item.id); } }}
       onClick={e => { if (!shown.current) return; e.stopPropagation(); if (e.delta <= 5 && e.button === 0 && useGame.getState().weapon !== 'laser') attack(e.point.toArray() as V3, item.id); }}>
@@ -137,6 +147,29 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
   </RigidBody>;
 });
 
+/** 조각의 (회전 포함) 경계 상자. */
+function bounds(part: Part) {
+  const half = new Vector3(...part.size).multiplyScalar(.5), center = new Vector3(...part.pos);
+  if (!part.rotation) return { min: center.clone().sub(half), max: center.clone().add(half) };
+  const q = new Quaternion().setFromEuler(new Euler(...part.rotation)), min = new Vector3(Infinity, Infinity, Infinity), max = new Vector3(-Infinity, -Infinity, -Infinity);
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) { const c = new Vector3(sx * half.x, sy * half.y, sz * half.z).applyQuaternion(q).add(center); min.min(c); max.max(c); }
+  return { min, max };
+}
+/**
+ * 남은 조각 중 바닥(고정 벽은 바닥 또는 천장)과 이어지지 않은 조각 번호를 돌려준다.
+ * 서로 닿거나 겹친 조각끼리 이어진 것으로 본다.
+ */
+function unsupported(pieces: Part[], removed: number[], fixed: boolean) {
+  const alive = pieces.map((_, i) => i).filter(i => !removed.includes(i));
+  if (alive.length < 2) return [];
+  const box = pieces.map(bounds), all = pieces.map(bounds);
+  const floor = Math.min(...all.map(b => b.min.y)), top = Math.max(...all.map(b => b.max.y)), gap = .015;
+  const touches = (a: number, b: number) => ['x', 'y', 'z'].every(k => box[a].min[k as 'x'] <= box[b].max[k as 'x'] + gap && box[b].min[k as 'x'] <= box[a].max[k as 'x'] + gap);
+  const held = new Set(alive.filter(i => box[i].min.y <= floor + .03 || (fixed && box[i].max.y >= top - .03)));
+  const queue = [...held];
+  while (queue.length) { const a = queue.pop()!; for (const b of alive) if (!held.has(b) && touches(a, b)) { held.add(b); queue.push(b); } }
+  return alive.filter(i => !held.has(i));
+}
 /** 떨어져 나가는 조각 하나를 물리 파편으로 만든다(맞은 쪽 반대로 살짝 튀며 떨어진다). */
 function pieceDebris(part: Part, q: Quaternion, origin: Vector3, scale: number, from: V3, speed: number, born: number): Debris {
   const p = new Vector3(...part.pos).multiplyScalar(scale).applyQuaternion(q).add(origin), local = new Quaternion();
