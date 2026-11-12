@@ -13,7 +13,7 @@ interface State {
   reset: () => void; addEffect: (effect: Effect) => void; addDebris: (parts: Debris[]) => void;
 }
 export const useGame = create<State>((set, get) => ({
-  weapon: 'bat', score: 0, best: loadBest(), destroyed: {}, round: 0, effects: [], debris: [], sound: false,
+  weapon: 'bat', score: 0, best: loadBest(), destroyed: {}, round: 0, effects: [], debris: [], sound: true,
   // 휴대폰·태블릿(터치 위주 기기)은 가벼운 그래픽으로 시작한다.
   quality: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 'low' : 'high',
   walls: true, ceiling: false, cameraRequest: 0, cameraMode: 'home', hovered: '', hint: '', ready: false,
@@ -27,5 +27,5 @@ export const useGame = create<State>((set, get) => ({
   },
   reset: () => set(s => ({ score: 0, destroyed: {}, debris: [], effects: [], round: s.round + 1, hovered: '', hint: '방송국을 원래 모습으로 복구했습니다.' })),
   addEffect: effect => set(s => ({ effects: [...s.effects.slice(-23), effect] })),
-  addDebris: parts => set(s => ({ debris: [...s.debris, ...parts].slice(-(s.quality === 'high' ? 240 : 100)) })),
+  addDebris: parts => set(s => ({ debris: [...s.debris, ...parts].slice(-(s.quality === 'high' ? 340 : 140)) })),
 }));

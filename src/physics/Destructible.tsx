@@ -1,10 +1,12 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { RigidBody, CuboidCollider, type RapierRigidBody } from '@react-three/rapier';
+import { RigidBody, CuboidCollider, ConvexHullCollider, type RapierRigidBody } from '@react-three/rapier';
 import { Euler, Quaternion, Vector3 } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
-import type { Item, Part, V3, Debris } from '../data/types';
+import type { Item, Part, V3, Debris, Finish } from '../data/types';
 import { ITEMS, specs } from '../data/room';
-import { fractureParts } from './fracture';
+import { fractureParts, splitPiece, prismPoints } from './fracture';
+import { contents, PROPS } from '../data/contents';
+import { playCrack, playCrumble, playThud } from '../game/audio';
 import { model } from '../scene/models';
 import { PartMesh } from '../scene/PartMesh';
 import { useGame } from '../game/store';
@@ -22,12 +24,16 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
   const [removed, setRemoved] = useState<number[]>([]), removedRef = useRef<number[]>([]);
   const parts = useMemo(() => model(item), [item]);
   // 미리 조각으로 나눠 둔 모양(맞을 때부터 이 조각들로 그린다).
-  const pieces = useMemo(() => fractureParts(parts, useGame.getState().quality === 'high' ? 36 : 20, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7))), [parts, item.id]);
+  const pieces = useMemo(() => fractureParts(parts, useGame.getState().quality === 'high' ? 56 : 30, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7))), [parts, item.id]);
   // 조각 색: 유리·화면을 뺀 가장 큰 부품들의 색.
   const chipColors = useMemo(() => {
     const colors = [...new Set(parts.filter(p => p.finish !== 'glass' && p.finish !== 'screen').sort((a, b) => b.size[0] * b.size[1] * b.size[2] - a.size[0] * a.size[1] * a.size[2]).slice(0, 4).map(p => p.color ?? '#9a9a90'))];
     return colors.length ? colors : ['#9a9a90'];
   }, [parts]);
+  const mainFinish = useMemo<Finish>(() => [...parts].sort((a, b) => b.size[0] * b.size[1] * b.size[2] - a.size[0] * a.size[1] * a.size[2])[0]?.finish ?? 'wood', [parts]);
+  // 수납장 안에 든 장비(카메라·마이크 등). 평소엔 안쪽에 보이고, 많이 부서지면 밖으로 쏟아진다.
+  const inside = useMemo(() => contents(item).map(c => ({ ...c, model: PROPS[c.prop]() })), [item]);
+  const [spilled, setSpilled] = useState(false), spilledRef = useRef(false);
   const spec = specs[item.kind], spawned = useRef(performance.now());
   const round = useGame(s => s.round), ceiling = useGame(s => s.ceiling);
   const view = useRef<import('three').Group>(null), shown = useRef(true);
@@ -42,7 +48,23 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     const rb = body.current;
     if (!rb) return;
     if (!item.fixed) rb.sleep();
-    stageRef.current = 0; removedRef.current = [];
+    setSpilled(false);
+    stageRef.current = 0; removedRef.current = []; spilledRef.current = false;
+    const sound = () => useGame.getState().sound;
+    /** 안에 든 장비를 실제 물체로 꺼낸다. */
+    const spill = (strength: number) => {
+      if (spilledRef.current || !inside.length) return;
+      spilledRef.current = true; setSpilled(true);
+      const t = rb.translation(), r = rb.rotation(), q = new Quaternion(r.x, r.y, r.z, r.w), scale = item.scale ?? 1, origin = new Vector3(t.x, t.y, t.z), now = performance.now();
+      useGame.getState().addDebris(inside.map((c, i) => {
+        const pos = new Vector3(...c.pos).multiplyScalar(scale).applyQuaternion(q).add(origin);
+        const rot = q.clone().multiply(new Quaternion().setFromEuler(new Euler(0, c.rotation ?? 0, 0)));
+        const out = new Vector3((Math.random() - .5) * .8, .9 + Math.random() * .8, .9 + Math.random() * .9).multiplyScalar(.8 + strength * 1.6).applyQuaternion(q);
+        const model = c.model.map(part => scalePart(part, scale));
+        const b = modelBounds(model);
+        return { id: nextEffectId(), part: { name: c.prop, pos: b.center, size: b.size, finish: 'black' as Finish }, model, pos: pos.toArray() as V3, rotation: rot.toArray() as [number, number, number, number], impulse: out.toArray() as V3, mass: Math.max(.15, b.size[0] * b.size[1] * b.size[2] * 120), born: now + i };
+      }));
+    };
     const centerY = (Math.min(...parts.map(p => p.pos[1] - p.size[1] / 2)) + Math.max(...parts.map(p => p.pos[1] + p.size[1] / 2))) / 2;
     const point = () => { const t = rb.translation(), r = rb.rotation(); return new Vector3(0, centerY * (item.scale ?? 1), 0).applyQuaternion(new Quaternion(r.x, r.y, r.z, r.w)).add(t); };
     const hit = (amount: number, impulse: V3, location: V3, maxSpeed = 3, fromContact = false) => {
@@ -63,15 +85,17 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         if (need <= 0 && amount >= 15 && removedRef.current.length < cap) need = 1;
         if (need > 0 && pieces.length > 1) {
           const pick = pieces.map((piece, i) => ({ i, d: new Vector3(...piece.pos).distanceToSquared(local) })).filter(({ i }) => !removedRef.current.includes(i)).sort((x, y) => x.d - y.d).slice(0, need).map(({ i }) => i);
-          useGame.getState().addDebris(pick.map((i, k) => pieceDebris(pieces[i], q, origin, scale, location, Math.min(maxSpeed + .8, 3), now + k)));
+          useGame.getState().addDebris(shards(pick.map(i => pieces[i])).map((piece, k) => pieceDebris(piece, q, origin, scale, location, Math.min(maxSpeed + .8, 3), now + k)));
+          if (sound()) playCrack(pieces[pick[0]]?.finish ?? mainFinish, .3 + pick.length * .12 + amount / 80);
           removedRef.current = [...removedRef.current, ...pick];
           // 받쳐 주는 조각이 없어져 공중에 뜬 조각은 그대로 떨어진다(물리 법칙).
-          const floating = unsupported(pieces, removedRef.current, !!item.fixed);
+          const floating = unsupported(pieces, removedRef.current, !!item.fixed && (item.bottom ?? 0) > .5);
           if (floating.length) {
             useGame.getState().addDebris(floating.map((i, k) => pieceDebris(pieces[i], q, origin, scale, location, .35, now + 50 + k)));
             removedRef.current = [...removedRef.current, ...floating];
           }
           setRemoved(removedRef.current);
+          if (removedRef.current.length > pieces.length * .3) spill(.4);
           if (!item.fixed) rb.wakeUp();
         }
         // 2) 맞을 때마다 부스러기 가루가 흩날린다.
@@ -96,7 +120,11 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
       // 벽이 무너지면 거기 걸려 있던 화이트보드·시계 등도 함께 떨어져 부서진다.
       ITEMS.filter(child => child.parentId === item.id && child.fixed).forEach((child, i) => setTimeout(() => targets.get(child.id)?.hit(1e6, [0, .4, 0], child.pos as V3), 60 + i * 50));
       const origin = rb.translation(), rot = rb.rotation(), q = new Quaternion(rot.x, rot.y, rot.z, rot.w);
-      const major = pieces.filter((_, i) => !removedRef.current.includes(i));
+      const major = shards(pieces.filter((_, i) => !removedRef.current.includes(i)), .3);
+      spill(1);
+      if (sound()) playCrumble(mainFinish, major.length);
+      const size = Math.max(...parts.map(p => Math.max(...p.size))) * (item.scale ?? 1);
+      aim.shake = Math.max(aim.shake, Math.min(.12, .02 + size * .03));
       // 물리 없이 튀는 작은 조각(칩)으로 '와장창' 느낌을 더한다.
       const colors = [...new Set(parts.filter(p => p.finish !== 'glass' && p.finish !== 'screen').sort((a, b) => b.size[0] * b.size[1] * b.size[2] - a.size[0] * a.size[1] * a.size[2]).slice(0, 4).map(p => p.color ?? '#9a9a90'))];
       const extent = Math.max(...parts.map(p => Math.max(Math.abs(p.pos[0]) + p.size[0] / 2, Math.abs(p.pos[2]) + p.size[2] / 2))) * (item.scale ?? 1);
@@ -107,16 +135,17 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         const local = new Quaternion();
         if (part.rotation) local.setFromEuler(new Euler(...part.rotation));
         const rotQ = q.clone().multiply(local);
+        const shaped = scalePart(part, scale);
         const direction = p.clone().sub(new Vector3(...location)); direction.y += .6; direction.normalize();
         const kick = direction.multiplyScalar(Math.min(5, maxSpeed + .8, 1.2 + amount / 60) * (.75 + (index * 37 % 10) / 20));
-        return { id: nextEffectId(), part: { ...part, pos: [0, 0, 0], size: part.size.map(n => n * scale) as V3, rotation: undefined }, pos: p.toArray() as V3, rotation: rotQ.toArray(), impulse: [kick.x + Math.max(-1.5, Math.min(1.5, impulse[0] * .06)), kick.y + .4, kick.z + Math.max(-1.5, Math.min(1.5, impulse[2] * .06))], mass: Math.max(.1, spec.mass / major.length), born: performance.now() + index };
+        return { id: nextEffectId(), part: { ...shaped, pos: [0, 0, 0], rotation: undefined }, pos: p.toArray() as V3, rotation: rotQ.toArray(), impulse: [kick.x + Math.max(-1.5, Math.min(1.5, impulse[0] * .06)), kick.y + .4, kick.z + Math.max(-1.5, Math.min(1.5, impulse[2] * .06))], mass: Math.max(.1, spec.mass / major.length), born: performance.now() + index };
       });
       useGame.getState().addDebris(debris);
       setStage(4);
     };
     targets.set(item.id, { point, hit });
     return () => { targets.delete(item.id); };
-  }, [item, parts, round, spec]);
+  }, [item, parts, round, spec, inside, mainFinish]);
 
   function onAim(e: ThreeEvent<PointerEvent>) {
     if (!shown.current) return;
@@ -142,6 +171,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     <group ref={view} visible={item.kind !== 'light' || ceiling} name={`model:${item.id}`} onPointerMove={onAim} onPointerOver={onAim} onPointerOut={() => { if (aim.target === item.id) { aim.target = ''; useGame.setState({ hovered: '' }); } }}
       onPointerDown={e => { if (!shown.current) return; onAim(e); if (useGame.getState().weapon === 'laser' && e.button === 0) { aim.holding = true; attack(aim.point, item.id); } }}
       onClick={e => { if (!shown.current) return; e.stopPropagation(); if (e.delta <= 5 && e.button === 0 && useGame.getState().weapon !== 'laser') attack(e.point.toArray() as V3, item.id); }}>
+      {!spilled && inside.map((c, i) => <group key={`c${i}`} position={c.pos} rotation={[0, c.rotation ?? 0, 0]}>{c.model.map((part, k) => <PartMesh key={k} part={part} />)}</group>)}
       {removed.length ? pieces.map((piece, index) => removed.includes(index) ? null : <PartMesh key={`p${index}`} part={piece} damaged={stage >= 2} />) : parts.map((part, index) => <PartMesh key={index} part={part} damaged={stage >= 2} />)}
     </group>
   </RigidBody>;
@@ -157,7 +187,7 @@ function bounds(part: Part) {
 }
 /**
  * 남은 조각 중 바닥(고정 벽은 바닥 또는 천장)과 이어지지 않은 조각 번호를 돌려준다.
- * 서로 닿거나 겹친 조각끼리 이어진 것으로 본다.
+ * 서로 닿거나 겹친 조각끼리 이어진 것으로 본다. 벽도 바닥에서만 받친다(문 위 상인방만 천장에 매달림).
  */
 function unsupported(pieces: Part[], removed: number[], fixed: boolean) {
   const alive = pieces.map((_, i) => i).filter(i => !removed.includes(i));
@@ -176,19 +206,50 @@ function pieceDebris(part: Part, q: Quaternion, origin: Vector3, scale: number, 
   if (part.rotation) local.setFromEuler(new Euler(...part.rotation));
   const dir = p.clone().sub(new Vector3(...from)); dir.y = Math.max(.15, dir.y) + .45; dir.normalize();
   const kick = dir.multiplyScalar(speed * (.65 + (Math.floor(born * 7) % 10) / 20));
-  return { id: nextEffectId(), part: { ...part, pos: [0, 0, 0], size: part.size.map(n => n * scale) as V3, rotation: undefined }, pos: p.toArray() as V3, rotation: q.clone().multiply(local).toArray() as [number, number, number, number], impulse: [kick.x, kick.y + .3, kick.z], mass: .2, born };
+  return { id: nextEffectId(), part: { ...scalePart(part, scale), pos: [0, 0, 0], rotation: undefined }, pos: p.toArray() as V3, rotation: q.clone().multiply(local).toArray() as [number, number, number, number], impulse: [kick.x, kick.y + .3, kick.z], mass: .2, born };
+}
+/** 크기(와 다각형 단면)를 배율만큼 키운다. */
+function scalePart(part: Part, scale: number): Part {
+  if (scale === 1) return part;
+  return { ...part, pos: part.pos.map(n => n * scale) as V3, size: part.size.map(n => n * scale) as V3, poly: part.poly?.map(([u, v]) => [u * scale, v * scale] as [number, number]) };
+}
+function modelBounds(model: Part[]) {
+  const min = new Vector3(Infinity, Infinity, Infinity), max = new Vector3(-Infinity, -Infinity, -Infinity);
+  for (const part of model) { const b = bounds(part); min.min(b.min); max.max(b.max); }
+  return { center: min.clone().add(max).multiplyScalar(.5).toArray() as V3, size: max.clone().sub(min).toArray() as V3 };
+}
+/**
+ * 떨어져 나가는 조각 중 큰 것은 날아가는 순간 한 번 더 쪼갠다(SMASH HANBAT의 splitPiece처럼).
+ * 그래서 크게 한 덩어리가 아니라 여러 개의 불규칙한 조각으로 흩어진다.
+ */
+function shards(list: Part[], min = .22) {
+  // 큰 조각은 작아질 때까지 여러 번 쪼갠다 (최대 3단계, 한 번에 최대 110조각).
+  let out = list;
+  for (let depth = 0; depth < 3; depth++) {
+    const next: Part[] = [];
+    for (const part of out) {
+      const kids = Math.max(...part.size) > min && part.shape !== 'cylinder' && next.length + out.length < 110 ? splitPiece(part, Math.random, min) : null;
+      next.push(...(kids ?? [part]));
+    }
+    if (next.length === out.length) break;
+    out = next;
+  }
+  return out.slice(0, 110);
 }
 export function Fragment({ fragment }: { fragment: Debris }) {
-  const ref = useRef<RapierRigidBody>(null);
+  const ref = useRef<RapierRigidBody>(null), thuds = useRef(0);
+  const points = useMemo(() => fragment.part.poly ? new Float32Array(prismPoints(fragment.part)) : null, [fragment.part]);
   useEffect(() => {
     const body = ref.current; if (!body) return;
     body.setRotation({ x: fragment.rotation[0], y: fragment.rotation[1], z: fragment.rotation[2], w: fragment.rotation[3] }, true);
     body.applyImpulse({ x: fragment.impulse[0] * fragment.mass, y: fragment.impulse[1] * fragment.mass, z: fragment.impulse[2] * fragment.mass }, true);
-    const spin = (fragment.id % 7) - 3;
-    body.setAngvel({ x: fragment.impulse[2] + spin, y: .8 + spin * .6, z: fragment.impulse[0] - spin * .5 }, true);
+    const spin = (fragment.id % 7) - 3, k = fragment.model ? .35 : 1;
+    body.setAngvel({ x: (fragment.impulse[2] + spin) * k, y: (.8 + spin * .6) * k, z: (fragment.impulse[0] - spin * .5) * k }, true);
   }, [fragment]);
-  return <RigidBody ref={ref} position={fragment.pos} colliders={false} canSleep ccd linearDamping={.35} angularDamping={.5} restitution={.2} friction={.65}>
-    <CuboidCollider args={fragment.part.size.map(v => Math.max(.015, v / 2)) as V3} mass={fragment.mass} collisionGroups={DEBRIS_GROUPS} />
-    <PartMesh part={fragment.part} damaged />
+  return <RigidBody ref={ref} position={fragment.pos} colliders={false} canSleep ccd linearDamping={.35} angularDamping={.5} restitution={.2} friction={.65}
+    onCollisionEnter={fragment.model ? () => { if (thuds.current++ < 2 && useGame.getState().sound) playThud(Math.min(1, fragment.mass)); } : undefined}>
+    {points ? <ConvexHullCollider args={[points]} mass={fragment.mass} collisionGroups={DEBRIS_GROUPS} />
+      : <CuboidCollider args={fragment.part.size.map(v => Math.max(.015, v / 2)) as V3} position={fragment.model ? fragment.part.pos : undefined} mass={fragment.mass} collisionGroups={DEBRIS_GROUPS} />}
+    {fragment.model ? fragment.model.map((part, i) => <PartMesh key={i} part={part} />) : <PartMesh part={fragment.part} damaged />}
   </RigidBody>;
 }

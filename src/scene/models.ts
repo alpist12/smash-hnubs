@@ -234,8 +234,14 @@ export function model(item: Item): Part[] {
       return parts;
     }
     case 'metalCabinet': {
-      const h = item.height ?? 1.3, width = item.width ?? .7, d = .6;
-      const parts = [box('철제 캐비닛 몸체', [0, h / 2, 0], [width, h, d], 'white', '#cfcbbc', .01), box('캐비닛 문', [0, h / 2 - .02, d / 2 + .01], [width - .1, h - .16, .02], 'white', '#d8d4c6', .006), box('캐비닛 손잡이', [width / 2 - .11, h / 2, d / 2 + .03], [.03, .1, .025], 'metal', '#8a8f8f'), box('캐비닛 받침', [0, .03, 0], [width + .02, .06, d + .02], 'black', '#4d4f4c', .005)];
+      // 속이 빈 철제 캐비닛: 옆판·뒤판·천판·바닥 + 가운데 선반. 안에 카메라·마이크 등이 들어 있다(contents.ts).
+      const h = item.height ?? 1.3, width = item.width ?? .7, d = .6, c = '#cfcbbc', inner = '#b9b5a7';
+      const parts = [
+        box('캐비닛 왼쪽 판', [-width / 2 + .0125, h / 2, 0], [.025, h, d], 'white', c, .006), box('캐비닛 오른쪽 판', [width / 2 - .0125, h / 2, 0], [.025, h, d], 'white', c, .006),
+        box('캐비닛 뒤판', [0, h / 2, -d / 2 + .0125], [width - .05, h, .025], 'white', inner, .004), box('캐비닛 천판', [0, h - .0125, 0], [width, .025, d], 'white', c, .006),
+        box('캐비닛 바닥판', [0, .075, 0], [width - .05, .025, d - .03], 'white', inner, .004), box('캐비닛 가운데 선반', [0, h * .5, -.01], [width - .05, .02, d - .06], 'white', inner, .004),
+        box('캐비닛 문', [0, h / 2 + .02, d / 2 + .01], [width - .03, h - .1, .02], 'white', '#d8d4c6', .006), box('캐비닛 손잡이', [width / 2 - .11, h / 2, d / 2 + .03], [.03, .1, .025], 'metal', '#8a8f8f'), box('캐비닛 받침', [0, .03, 0], [width + .02, .06, d + .02], 'black', '#4d4f4c', .005),
+      ];
       for (const x of [-.13, .13]) parts.push({ ...box('타공 통풍구', [x, h - .32, d / 2 + .022], [.15, .13, .004], 'black', '#3d4142', 0), collider: false });
       parts.push(box('위에 놓인 사진 액자', [-.12, h + .1, -.05], [.22, .18, .02], 'paper', '#e3e1d8', .002));
       return parts;

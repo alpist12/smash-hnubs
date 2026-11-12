@@ -93,6 +93,6 @@ test('weapons use distinct radii, decreasing explosion force and bounded debris'
   for (let i = 0; i < 150; i++) useGame.getState().addEffect({ id: i, born: 0, type: 'bat', radius: 1, point: [0, 0, 0] });
   assert.equal(useGame.getState().effects.length, 24);
   const fragment = { id: 0, born: 0, pos: [0, 0, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], impulse: [0, 0, 0] as [number, number, number], mass: 1, part: model(ITEMS[0])[0] };
-  useGame.getState().addDebris(Array.from({ length: 320 }, (_, id) => ({ ...fragment, id })));
-  assert.equal(useGame.getState().debris.length, 240);
+  useGame.getState().addDebris(Array.from({ length: 420 }, (_, id) => ({ ...fragment, id })));
+  assert.equal(useGame.getState().debris.length, 340);
 });

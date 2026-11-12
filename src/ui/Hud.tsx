@@ -19,7 +19,7 @@ export function Hud() {
   const weapon = useGame(s => s.weapon), score = useGame(s => s.score), best = useGame(s => s.best);
   const destroyed = useGame(s => s.destroyed), ready = useGame(s => s.ready), hovered = useGame(s => s.hovered);
   const cameraMode = useGame(s => s.cameraMode);
-  const sound = useGame(s => s.sound), walls = useGame(s => s.walls), ceiling = useGame(s => s.ceiling), quality = useGame(s => s.quality);
+  const sound = useGame(s => s.sound);
   const hint = useGame(s => s.hint), [help, setHelp] = useState(false), [restoring, setRestoring] = useState(false);
   const count = Object.keys(destroyed).length, percent = Math.round(count / TOTAL * 100);
   function camera(mode: 'home' | 'top' | 'photo' | 'technical' | 'announcer') { useGame.setState(s => ({ cameraMode: mode, cameraRequest: s.cameraRequest + 1 })); }
@@ -62,11 +62,6 @@ export function Hud() {
       <div className="brand-row">
         <div className="brand pill"><h1>HNUBS <span>SMASH</span></h1></div>
         <label className="room-navigation pill"><Icon name="home" size={15}/><span className="sr-only">공간 보기</span><select aria-label="공간 보기" value={cameraMode === 'photo' ? 'home' : cameraMode} onChange={e => camera(e.target.value as 'home' | 'top' | 'technical' | 'announcer')}><option value="home">메인룸</option><option value="technical">기술부스</option><option value="announcer">아나부스</option><option value="top">방송국 전체</option></select></label>
-      </div>
-      <div className="view-controls">
-        <button className="pill small" aria-pressed={walls} onClick={() => useGame.setState({ walls: !walls })}><Icon name="wall" size={14}/><span>벽</span></button>
-        <button className="pill small" aria-pressed={ceiling} onClick={() => useGame.setState({ ceiling: !ceiling })}><Icon name="ceiling" size={14}/><span>천장</span></button>
-        <label className="quality pill small"><span className="sr-only">그래픽 품질</span><select aria-label="그래픽 품질" value={quality} onChange={e => useGame.setState({ quality: e.target.value as 'low' | 'high' })}><option value="high">고화질</option><option value="low">가벼움</option></select></label>
       </div>
     </header>
     <section className="scoreboard" aria-label="게임 점수">
