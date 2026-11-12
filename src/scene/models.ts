@@ -218,16 +218,18 @@ export function model(item: Item): Part[] {
     case 'panel': return [box('흡음판 왼쪽', [-.195, .42, 0], [.39, .84, .07], 'fabric', '#8d9ca7'), box('흡음판 오른쪽', [.195, .42, 0], [.39, .84, .07], 'fabric', '#8d9ca7')];
     case 'light': return [box('LED 평판 조명 프레임', [0, 0, 0], [1.25, .05, .32], 'white', '#c9cccc'), box('LED 확산판', [0, -.03, 0], [1.2, .014, .27], 'white', '#fff5d9')];
     case 'anchorDesk': {
-      // 아나부스 사진: 아나운서 쪽으로 오목한 곡선형 베이지 데스크, 유리 상판, 가로 홈, 넓은 받침.
-      const parts: Part[] = [], segments = 10, depth = item.depth ?? .62;
-      for (let i = 0; i < segments; i++) {
-        const x = (i - (segments - 1) / 2) * w / segments, t = x / (w / 2), z = .22 * t * t, rotation: V3 = [0, -Math.atan(.88 * t / w), 0];
-        const seg = w / segments + .02;
-        parts.push({ ...box('데스크 몸체', [x, .4, z - .05], [seg, .64, depth - .14], 'white', '#cfcab6', .012), rotation });
+      // 아나부스 데스크: 가운데 일자 + 양쪽 날개 3칸. 날개는 아나운서 쪽으로 꺾여 감싼다. 유리 상판, 가로 홈, 넓은 받침.
+      const parts: Part[] = [], depth = item.depth ?? .62, seg = w / 3, bend = .38;
+      const sections: { x: number; z: number; rotation: V3 }[] = [
+        { x: 0, z: 0, rotation: [0, 0, 0] },
+        ...[-1, 1].map(side => ({ x: side * (seg / 2 + Math.cos(bend) * seg / 2), z: Math.sin(bend) * seg / 2, rotation: [0, -side * bend, 0] as V3 })),
+      ];
+      for (const { x, z, rotation } of sections) {
+        parts.push({ ...box('데스크 몸체', [x, .4, z - .05], [seg + .02, .64, depth - .14], 'white', '#cfcab6', .012), rotation });
         for (const y of [.22, .4, .58]) parts.push({ ...box('데스크 가로 홈', [x, y, z + (depth - .14) / 2 - .04], [seg, .018, .012], 'metal', '#9d9a8c', 0), rotation, collider: false });
-        parts.push({ ...box('회색 상판', [x, .745, z], [seg, .03, depth + .1], 'white', '#bdbdb6', .008), rotation });
-        parts.push({ ...box('유리 상판', [x, .772, z], [seg, .014, depth + .12], 'glass', '#cfe1df', .004), rotation, collider: false });
-        parts.push({ ...box('데스크 받침', [x, .035, z - .02], [seg, .07, depth + .35], 'white', '#c4c1b2', .01), rotation });
+        parts.push({ ...box('회색 상판', [x, .745, z], [seg + .03, .03, depth + .1], 'white', '#bdbdb6', .008), rotation });
+        parts.push({ ...box('유리 상판', [x, .772, z], [seg + .03, .014, depth + .12], 'glass', '#cfe1df', .004), rotation, collider: false });
+        parts.push({ ...box('데스크 받침', [x, .035, z - .02], [seg + .03, .07, depth + .35], 'white', '#c4c1b2', .01), rotation });
       }
       return parts;
     }
