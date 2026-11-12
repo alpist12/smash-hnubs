@@ -8,7 +8,7 @@ import { studioTexture, type StudioTextureKind } from './studioTextures';
 import { PartMesh } from './PartMesh';
 import { useGame } from '../game/store';
 import { aim, attack } from '../physics/attacks';
-import { backWallVisible } from './Room';
+import { wallVisible } from './wallVisibility';
 
 const H = 2.8, HALF = 7, SPAN = STUDIO_START - STUDIO_END, MID = (STUDIO_START + STUDIO_END) / 2;
 const TECH = STUDIOS.find(s => s.id === 'technical')!, ANNOUNCER = STUDIOS.find(s => s.id === 'announcer')!;
@@ -42,23 +42,9 @@ function AcousticRun({ z, segments, thickness = .12 }: { z: number; segments: [n
 function Baseboard({ z, segments, side }: { z: number; segments: [number, number][]; side: 1 | -1 }) {
   return <>{segments.map(([a, b]) => <Block key={a} pos={[(a + b) / 2, .06, z + side * .07]} size={[b - a, .12, .025]} finish="wood" color={BASEBOARD} />)}</>;
 }
-function SoundproofDoor() {
-  // 사진: 회색 철제 문틀 + 주황 가죽 누빔, 은색 단추. 통로 쪽으로 열려 있다.
-  const w = .96;
-  return <group position={[BOOTH_DOOR.x - BOOTH_DOOR.width / 2 + .02, 0, BOOTH_WALL_Z + .06]} rotation={[0, -1.05, 0]}>
-    <Block pos={[w / 2, 1.05, 0]} size={[w, 2.1, .08]} finish="white" color="#b9b6ab" />
-    {[-1, 1].map(side => <group key={side}>
-      <Block pos={[w / 2, 1.08, side * .05]} size={[.62, 1.7, .03]} finish="leather" color="#c27a2e" />
-      <Block pos={[w / 2, 1.08, side * .042]} size={[.7, 1.78, .02]} finish="wood" color="#d6c39c" />
-      {[.4, .68, .96, 1.24, 1.52, 1.8].flatMap((y, row) => (row % 2 ? [.4, .56] : [.32, .48, .64]).map(x => <PartMesh key={`${side}-${x}-${y}`} part={{ name: '가죽 누빔 단추', pos: [x, y, side * .068], size: [.03, .012, .03], finish: 'metal', color: '#c9c9c4', shape: 'cylinder', rotation: [Math.PI / 2, 0, 0] }} />))}
-    </group>)}
-    <Block pos={[w - .12, 1.02, .07]} size={[.03, .16, .05]} finish="metal" color="#b6bab8" />
-    <Block pos={[w - .12, 1.02, -.07]} size={[.03, .16, .05]} finish="metal" color="#b6bab8" />
-  </group>;
-}
 function BoothWall() {
-  const ref = useRef<Group>(null), walls = useGame(s => s.walls), cameraMode = useGame(s => s.cameraMode);
-  useFrame(({ camera }) => { if (ref.current) ref.current.visible = walls && cameraMode !== 'top' && cameraMode !== 'announcer' && camera.position.z > BOOTH_WALL_Z; });
+  const ref = useRef<Group>(null);
+  useFrame(({ camera }) => { if (ref.current) ref.current.visible = wallVisible('booth', camera.position.x, camera.position.z); });
   const door: [number, number] = [BOOTH_DOOR.x - BOOTH_DOOR.width / 2, BOOTH_DOOR.x + BOOTH_DOOR.width / 2];
   const win: [number, number] = [BOOTH_WINDOW.x - BOOTH_WINDOW.width / 2, BOOTH_WINDOW.x + BOOTH_WINDOW.width / 2];
   const full = wallSegments([door, win]), { bottom, top } = BOOTH_WINDOW, ww = BOOTH_WINDOW.width, z = BOOTH_WALL_Z;
@@ -68,7 +54,6 @@ function BoothWall() {
       <CuboidCollider position={[BOOTH_DOOR.x, 2.45, z]} args={[BOOTH_DOOR.width / 2, .35, .06]} />
       <CuboidCollider position={[BOOTH_WINDOW.x, bottom / 2, z]} args={[ww / 2, bottom / 2, .06]} />
       <CuboidCollider position={[BOOTH_WINDOW.x, (top + H) / 2, z]} args={[ww / 2, (H - top) / 2, .06]} />
-      <CuboidCollider position={[BOOTH_WINDOW.x, (bottom + top) / 2, z]} args={[ww / 2, (top - bottom) / 2, .02]} />
     </RigidBody>
     <group ref={ref}>
       <AcousticRun z={z} segments={full} />
@@ -77,8 +62,7 @@ function BoothWall() {
       <Surface pos={[BOOTH_DOOR.x, 2.45, z]} size={[BOOTH_DOOR.width, .7, .12]} kind="acoustic" uv={[BOOTH_DOOR.width, .7]} />
       <Surface pos={[BOOTH_WINDOW.x, bottom / 2, z]} size={[ww, bottom, .12]} kind="acoustic" uv={[ww, bottom]} />
       <Surface pos={[BOOTH_WINDOW.x, (top + H) / 2, z]} size={[ww, H - top, .12]} kind="acoustic" uv={[ww, H - top]} />
-      {/* 이중 유리 관찰창 + 넓은 원목 프레임 */}
-      {[-.035, .035].map(dz => <mesh key={dz} position={[BOOTH_WINDOW.x, (bottom + top) / 2, z + dz]}><boxGeometry args={[ww, top - bottom, .012]} /><meshPhysicalMaterial color="#a9c2c6" transparent opacity={.18} roughness={.08} metalness={.1} depthWrite={false} /></mesh>)}
+      {/* 넓은 원목 프레임 (이중 유리는 부술 수 있는 glassPane 물체) */}
       {[-1, 1].map(side => <group key={side}>
         <Block pos={[BOOTH_WINDOW.x + side * (ww / 2 + .07), (bottom + top) / 2, 0 + z]} size={[.16, top - bottom + .3, .22]} finish="wood" color={WOOD} />
         <Block pos={[BOOTH_WINDOW.x, side < 0 ? bottom - .07 : top + .07, z]} size={[ww + .3, .16, .22]} finish="wood" color={WOOD} />
@@ -86,7 +70,6 @@ function BoothWall() {
       {/* 문틀 */}
       {door.map(x => <Block key={x} pos={[x, 1.1, z]} size={[.07, 2.2, .18]} finish="wood" color={WOOD} />)}
       <Block pos={[BOOTH_DOOR.x, 2.17, z]} size={[BOOTH_DOOR.width + .07, .07, .18]} finish="wood" color={WOOD} />
-      <SoundproofDoor />
       {/* 기술부스 쪽 문 옆 회색 분전함 */}
       <Block pos={[BOOTH_DOOR.x + .95, .55, z + .1]} size={[.34, .4, .1]} finish="white" color="#c9c7bb" />
       {/* 아나부스 쪽 조명 스위치 */}
@@ -107,15 +90,6 @@ function OuterWall() {
       {[-5.6, 6.0].map(x => <Block key={x} pos={[x, H / 2, STUDIO_END + .02]} size={[.09, H, .03]} finish="wood" color={WOOD} />)}
     </group>
   </>;
-}
-/** 메인룸 뒷벽의 부스 쪽 면: 흡음 패널로 마감, 메인룸 문 위치는 비운다. */
-function MainWallBack() {
-  const ref = useRef<Group>(null), segs = wallSegments([[-4.375 - .53, -4.375 + .53]]);
-  useFrame(({ camera }) => { if (ref.current) ref.current.visible = backWallVisible(useGame.getState().walls, camera.position.z); });
-  return <group ref={ref}>
-    <AcousticRun z={STUDIO_START - .07} segments={segs} thickness={.02} />
-    <Baseboard z={STUDIO_START - .07} segments={wallSegments([[-HALF, PLATFORM_EDGE_X]])} side={-1} />
-  </group>;
 }
 function SideWalls() {
   const left = useRef<Group>(null), right = useRef<Group>(null), walls = useGame(s => s.walls);
@@ -165,6 +139,6 @@ export function Studios() {
       <Block pos={[PLATFORM_EDGE_X - .02, .115, techMid]} size={[.05, .02, techDepth]} finish="metal" color="#5f6a70" />
       <Block pos={[0, -.17, MID]} size={[HALF * 2 + .24, .3, SPAN]} finish="metal" color="#686b68" />
     </RigidBody>
-    <MainWallBack /><BoothWall /><OuterWall /><SideWalls /><Ceilings />
+    <BoothWall /><OuterWall /><SideWalls /><Ceilings />
   </group>;
 }

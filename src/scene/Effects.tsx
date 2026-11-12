@@ -10,7 +10,7 @@ const UP = new Vector3(0, 1, 0);
 function effectColor(effect: Effect) {
   if (effect.type === 'fuse') return '#e8a86b';
   if (effect.type === 'rocket') return '#ff7a3d';
-  if (effect.type === 'shatter') return effect.colors?.[0] ?? '#9a9a90';
+  if (effect.type === 'shatter' || effect.type === 'dust') return effect.colors?.[0] ?? '#9a9a90';
   return WEAPONS[effect.type].color;
 }
 /** 미사일 비행: from → point 포물선, 몸체는 진행 방향을 향하고 뒤로 연기 꼬리. */
@@ -67,6 +67,26 @@ function Shatter({ effect }: { effect: Effect }) {
   });
   return <group ref={group} position={effect.point}>{chips.map((c, i) => <mesh key={i} castShadow scale={1}><tetrahedronGeometry args={[c.size, 0]} /><meshStandardMaterial color={c.color} roughness={.8} flatShading /></mesh>)}</group>;
 }
+/** 타격 가루: 부품 색의 작은 입자가 퍼졌다가 천천히 가라앉으며 사라진다. */
+function Dust({ effect }: { effect: Effect }) {
+  const group = useRef<Group>(null), count = useGame.getState().quality === 'high' ? 16 : 8;
+  const motes = useRef(Array.from({ length: count }, (_, i) => {
+    const a = i * 2.39996 + effect.id * .7, sp = (.35 + (i * 37 % 11) / 14) * effect.radius;
+    return { v: new Vector3(Math.cos(a) * sp, .25 + (i * 13 % 7) / 9, Math.sin(a) * sp), size: .012 + (i * 29 % 9) / 400, color: i % 3 === 0 ? '#d9d4c8' : effect.colors![i % effect.colors!.length] };
+  })).current;
+  useFrame(() => {
+    const t = (performance.now() - effect.born) / 1000;
+    if (!group.current) return;
+    group.current.visible = t < 1.1;
+    group.current.children.forEach((mote, i) => {
+      const m = motes[i], drag = 1 - Math.exp(-t * 3);
+      mote.position.set(m.v.x * drag / 3, m.v.y * drag / 3 - .35 * t * t, m.v.z * drag / 3);
+      mote.scale.setScalar(Math.max(.01, 1 + t * 1.5));
+      ((mote as Mesh).material as MeshBasicMaterial).opacity = Math.max(0, .75 * (1 - t / 1.1));
+    });
+  });
+  return <group ref={group} position={effect.point}>{motes.map((m, i) => <mesh key={i}><icosahedronGeometry args={[m.size, 0]} /><meshBasicMaterial color={m.color} transparent opacity={.75} depthWrite={false} /></mesh>)}</group>;
+}
 function Impact({ effect }: { effect: Effect }) {
   const camera = useThree(state => state.camera);
   const group = useRef<Group>(null), ring = useRef<Mesh>(null), cloud = useRef<Group>(null), flash = useRef<Mesh>(null), sparks = useRef<Group>(null), burst = useRef<Group>(null);
@@ -113,6 +133,7 @@ function Impact({ effect }: { effect: Effect }) {
 function EffectView({ effect }: { effect: Effect }) {
   if (effect.type === 'rocket') return <Rocket effect={effect} />;
   if (effect.type === 'shatter') return <Shatter effect={effect} />;
+  if (effect.type === 'dust') return <Dust effect={effect} />;
   return <Impact effect={effect} />;
 }
 const SWING = { from: -1.5, to: 1.1, duration: .26 };

@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { MOUSE, TOUCH, Vector3, PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { useGame } from '../game/store';
+import { cameraInput } from './cameraInput';
 import { aim } from '../physics/attacks';
 import { STUDIOS, WORLD } from '../data/studios';
 import { ROOM } from '../data/room';
@@ -59,6 +60,22 @@ export function CameraRig() {
       camera.position.lerpVectors(start.current, goal.current, 1 - (1 - t) ** 3); camera.lookAt(controls.current.target); controls.current.update();
     }
     moveWithKeys(delta);
+    const c = controls.current;
+    if (cameraInput.zoom || cameraInput.rotate) {
+      const offset = camera.position.clone().sub(c.target);
+      if (cameraInput.rotate) offset.applyAxisAngle(new Vector3(0, 1, 0), cameraInput.rotate * 1.5 * delta);
+      if (cameraInput.zoom) offset.multiplyScalar(Math.min(60 / offset.length(), Math.max(1.4 / offset.length(), Math.exp(-cameraInput.zoom * 1.4 * delta))));
+      camera.position.copy(c.target).add(offset); transition.current = 1; c.update();
+    }
+    if (cameraInput.focus) {
+      // 더블클릭한 곳으로 시선을 부드럽게 옮기고 조금 다가간다.
+      const focus = new Vector3(...cameraInput.focus), step = 1 - Math.exp(-delta * 7), move = focus.clone().sub(c.target).multiplyScalar(step);
+      c.target.add(move); camera.position.add(move);
+      const offset = camera.position.clone().sub(c.target), goal = Math.max(3.2, Math.min(offset.length(), 7));
+      offset.setLength(offset.length() + (goal - offset.length()) * step); camera.position.copy(c.target).add(offset);
+      transition.current = 1; c.update();
+      if (focus.distanceTo(c.target) < .02) cameraInput.focus = null;
+    }
     controls.current.target.clamp(new Vector3(-8, 0, WORLD.minZ - .5), new Vector3(8, 2.4, WORLD.maxZ + .5));
     controls.current.enableRotate = !(useGame.getState().weapon === 'laser' && aim.holding);
     if (aim.shake > .001 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {

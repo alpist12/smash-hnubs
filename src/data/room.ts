@@ -1,5 +1,5 @@
-import type { Item, Kind, Spec } from './types';
-import { BOOTH_WALL_Z, BOOTH_WINDOW, STUDIO_END, STUDIO_START } from './studios';
+import type { Item, Kind, Spec, WallSide } from './types';
+import { BOOTH_DOOR, BOOTH_WALL_Z, BOOTH_WINDOW, STUDIO_END, STUDIO_START } from './studios';
 export { WORLD } from './studios';
 import savedLayout from './layout.json';
 import { applyLayout } from './layout';
@@ -51,6 +51,17 @@ export const specs: Record<Kind, Spec> = {
   ampRack: { label: '스탠드 앰프', mass: 9, threshold: 65, score: 45, collision: 22 },
   headphones: { label: '모니터 헤드폰', mass: .4, threshold: 20, score: 15, collision: 6 },
   equipmentStack: { label: 'VCR·트라이캐스터 장비장', mass: 28, threshold: 120, score: 85, collision: 34 },
+  waterPurifier: { label: '정수기', mass: 18, threshold: 90, score: 55, collision: 28 },
+  wallSegment: { label: '벽', mass: 400, threshold: 180, score: 80, collision: 999 },
+  windowWall: { label: '복도 쪽 창문', mass: 300, threshold: 120, score: 90, collision: 999 },
+  door: { label: '문', mass: 60, threshold: 110, score: 70, collision: 999 },
+  whiteboard: { label: '화이트보드', mass: 8, threshold: 45, score: 40, collision: 999 },
+  chalkboard: { label: '초록 칠판', mass: 12, threshold: 55, score: 45, collision: 999 },
+  projectorScreen: { label: '빔 스크린', mass: 6, threshold: 40, score: 40, collision: 999 },
+  wallClock: { label: '벽시계', mass: 1, threshold: 18, score: 25, collision: 999 },
+  wireBoard: { label: '철망 메모판', mass: 2, threshold: 22, score: 15, collision: 999 },
+  poster: { label: '포스터', mass: .3, threshold: 10, score: 10, collision: 999 },
+  glassPane: { label: '관찰창 유리', mass: 30, threshold: 60, score: 80, collision: 999 },
 };
 
 let nextId = 0;
@@ -176,6 +187,59 @@ add('foldingChair', [-1.5, 0, far + 1.2], { rotation: .3 });
 add('ampRack', [5.9, 0, far + .35]);
 add('carton', [4.7, 0, far + .3], { width: .55, height: .45 });
 for (const x of [-3.5, .5, 4.5]) for (const z of [W - 1.6, far + 1.8]) add('light', [x, 2.72, z], { fixed: true });
+// 냉장고 옆 정수기 (사용자 요청). 기존 가구 ID를 지키려고 마지막에 추가한다.
+add('waterPurifier', [-1.5, 0, ROOM.depth / 2 - .3], { rotation: Math.PI });
+// ── 부술 수 있는 벽·문·벽 부착물 (모두 고정 물체, 기존 가구 ID 보존을 위해 마지막에 추가) ──
+type Side = Exclude<WallSide, 'booth'>;
+const WALLS: Record<Side, { origin: [number, number]; angle: number; length: number }> = {
+  back: { origin: [0, -ROOM.depth / 2], angle: 0, length: ROOM.width },
+  front: { origin: [0, ROOM.depth / 2], angle: Math.PI, length: ROOM.width },
+  left: { origin: [-ROOM.width / 2, 0], angle: Math.PI / 2, length: ROOM.depth },
+  right: { origin: [ROOM.width / 2, 0], angle: -Math.PI / 2, length: ROOM.depth },
+};
+/** 벽 기준 좌표(lx: 벽을 따라, lz: 방 안쪽으로) → 세계 좌표. */
+function wallPoint(side: Side, lx: number, y = 0, lz = 0): Item['pos'] {
+  const { origin: [ox, oz], angle: a } = WALLS[side];
+  return [ox + lx * Math.cos(a) + lz * Math.sin(a), y, oz - lx * Math.sin(a) + lz * Math.cos(a)];
+}
+const segments: { side: Side; x: number; width: number; item: Item }[] = [];
+function wallRun(side: Side, from: number, to: number, extra: Partial<Item> = {}) {
+  const n = Math.max(1, Math.ceil((to - from) / 1.8 - 1e-6)), width = (to - from) / n;
+  for (let i = 0; i < n; i++) { const x = from + (i + .5) * width; segments.push({ side, x, width, item: add('wallSegment', wallPoint(side, x), { width, rotation: WALLS[side].angle, wall: side, fixed: true, ...extra }) }); }
+}
+function doorway(side: Side, x: number, door: Partial<Item>, extra: Partial<Item> = {}) {
+  add('wallSegment', wallPoint(side, x), { width: 1.06, bottom: 2.18, jambs: true, rotation: WALLS[side].angle, wall: side, fixed: true, ...extra });
+  add('door', wallPoint(side, x - .52, 0, .1), { rotation: WALLS[side].angle + (door.rotation ?? 0), wall: side, fixed: true, leather: door.leather });
+}
+function mount(kind: Kind, side: Side, lx: number, y: number, lz: number, extra: Partial<Item> = {}) {
+  const parent = segments.find(seg => seg.side === side && Math.abs(seg.x - lx) <= seg.width / 2 + .01);
+  return add(kind, wallPoint(side, lx, y, lz), { rotation: WALLS[side].angle, wall: side, fixed: true, parentId: parent?.item.id, ...extra });
+}
+const BACK_DOOR = -ROOM.width * .3125, LEFT_DOOR = -ROOM.depth * (1.32 / 4.7);
+// 뒷벽(기술부스 쪽): 부스 쪽 면은 흡음 마감. 열린 주황 가죽 방음문.
+wallRun('back', -ROOM.width / 2, BACK_DOOR - .53, { studioFace: true }); wallRun('back', BACK_DOOR + .53, ROOM.width / 2, { studioFace: true });
+doorway('back', BACK_DOOR, { leather: true, rotation: -1.25 }, { studioFace: true });
+// 앞벽(스크린 쪽), 왼쪽 벽(복도 문 · 닫힌 원목 문), 오른쪽 벽(복도 창 4개).
+wallRun('front', -ROOM.width / 2, ROOM.width / 2);
+wallRun('left', -ROOM.depth / 2, LEFT_DOOR - .53); wallRun('left', LEFT_DOOR + .53, ROOM.depth / 2);
+doorway('left', LEFT_DOOR, {});
+for (const x of [-3.285, -1.095, 1.095, 3.285]) segments.push({ side: 'right', x, width: 2.19, item: add('windowWall', wallPoint('right', x), { width: 2.19, rotation: WALLS.right.angle, wall: 'right', fixed: true }) });
+for (const x of [-4.44, 4.44]) wallRun('right', x - .06, x + .06);
+// 벽 부착물: 부서진 벽과 함께 떨어져 나간다(parentId).
+mount('whiteboard', 'back', -1.3, 1.62, .15, { texture: 'rules' });
+mount('whiteboard', 'back', .45, 1.62, .15, { texture: 'calendar' });
+mount('wireBoard', 'back', 1.62, 1.68, .13);
+mount('poster', 'back', -2.65, 1.62, .13);
+mount('projectorScreen', 'front', BACK_DOOR, 1.68, .15);
+mount('chalkboard', 'front', -ROOM.width * (.3 / 8.8) + .9, 1.62, .13);
+mount('wallClock', 'right', 0, 2.28, .2);
+// 기술부스↔아나부스: 방음문과 관찰창 이중 유리.
+add('door', [BOOTH_DOOR.x - BOOTH_DOOR.width / 2 + .02, 0, BOOTH_WALL_Z + .06], { rotation: -1.05, wall: 'booth', fixed: true, leather: true });
+add('glassPane', [BOOTH_WINDOW.x, (BOOTH_WINDOW.bottom + BOOTH_WINDOW.top) / 2, BOOTH_WALL_Z], { width: BOOTH_WINDOW.width, height: BOOTH_WINDOW.top - BOOTH_WINDOW.bottom, wall: 'booth', fixed: true });
+// 예전 뒷벽 흡음판 3장은 새 벽 패널과 겹치므로 목록에서 뺀다(다른 가구 ID는 그대로 유지된다).
+for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'panel') items.splice(i, 1);
+// 너무 쉽게 깨지지 않도록 모든 가구의 내구도를 2배로 (금·가루가 충분히 쌓인 뒤 깨진다).
+for (const spec of Object.values(specs)) spec.threshold *= 2;
 export const DEFAULT_ITEMS = items;
 export const ITEMS = applyLayout(DEFAULT_ITEMS, savedLayout);
 export const TOTAL = ITEMS.length;

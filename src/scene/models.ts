@@ -299,6 +299,67 @@ export function model(item: Item): Part[] {
       return parts;
     }
     case 'headphones': return [{ ...box('헤드밴드', [0, .17, 0], [.17, .025, .04], 'black', '#202326', .01) }, cylinder('왼쪽 이어컵', [-.08, .08, 0], [.08, .14, .08], 'black', '#26292c'), cylinder('오른쪽 이어컵', [.08, .08, 0], [.08, .14, .08], 'black', '#26292c')];
+    case 'wallSegment': {
+      // 메인룸 벽 한 구간: 하단 원목 → 하늘색 흡음 띠 → 상단 원목. bottom>0이면 문 위 상인방.
+      const b = item.bottom ?? 0, h = 2.8 - b, parts: Part[] = [box('벽체', [0, b + h / 2, 0], [w, h, .1], 'white', '#c9bda6', .004)];
+      const panels = (y: number, height: number, pitch: number, finish: Finish, color: string, name: string) => {
+        const n = Math.max(1, Math.round(w / pitch));
+        for (let i = 0; i < n; i++) parts.push(box(name, [-w / 2 + (i + .5) * w / n, y, .065], [w / n - .012, height, .03], finish, color, .004));
+      };
+      if (b === 0) {
+        panels(.51, 1.0, .6, 'wood', '#d2bc98', '하단 원목 패널'); panels(1.5, .86, .9, 'fabric', '#a5b4c6', '하늘색 흡음 패널'); panels(2.37, .82, .9, 'wood', '#d8c4a3', '상단 원목 패널');
+        for (const y of [1.05, 1.95]) parts.push(box('원목 몰딩', [0, y, .085], [w, .05, .05], 'wood', '#b89f7c', .004));
+        parts.push(box('걸레받이', [0, .06, .085], [w, .1, .05], 'wood', '#a18e78', .004), box('천장 몰딩', [0, 2.76, .07], [w, .08, .06], 'white', '#bdbeb5', .004));
+      } else panels(b + h / 2, h - .02, .9, 'wood', '#d8c4a3', '문 위 원목 패널');
+      if (item.jambs) {
+        for (const x of [-w / 2 - .03, w / 2 + .03]) parts.push({ ...box('문틀', [x, 1.08, .02], [.07, 2.16, .16], 'wood', '#cdb791', .004), collider: false });
+        parts.push(box('문틀 위', [0, 2.16, .02], [w + .13, .07, .16], 'wood', '#cdb791', .004));
+      }
+      if (item.studioFace) parts.push(box('부스 쪽 흡음 마감', [0, b + h / 2, -.06], [w, h, .02], 'fabric', '#8697aa', .004));
+      return parts;
+    }
+    case 'windowWall': {
+      // 복도 쪽 창: 아래 원목 벽, 회색 창턱, 알루미늄 창틀, 유리, 반쯤 내린 크림색 롤블라인드.
+      const parts: Part[] = [box('창 아래 벽체', [0, .525, 0], [w, 1.05, .1], 'white', '#c9bda6', .004), box('창 위 벽체', [0, 2.71, 0], [w, .18, .1], 'white', '#c9bda6', .004)];
+      const n = Math.max(1, Math.round(w / .6));
+      for (let i = 0; i < n; i++) parts.push(box('하단 원목 패널', [-w / 2 + (i + .5) * w / n, .51, .065], [w / n - .012, 1.0, .03], 'wood', '#d2bc98', .004));
+      parts.push(box('화강석 창턱', [0, 1.08, .1], [w, .05, .32], 'metal', '#8c908f', .006), box('걸레받이', [0, .06, .085], [w, .1, .05], 'wood', '#a18e78', .004));
+      for (const y of [1.13, 2.6]) parts.push(box('창틀 가로', [0, y, .02], [w, .06, .07], 'metal', '#b5b9b1', .004));
+      for (const x of [-w / 2 + .03, 0, w / 2 - .03]) parts.push(box('창틀 세로', [x, 1.87, .02], [x ? .06 : .04, 1.44, .07], 'metal', '#b5b9b1', .004));
+      parts.push(box('창 유리', [0, 1.87, 0], [w - .1, 1.42, .015], 'glass', '#9fb7bd', .002));
+      parts.push(box('롤블라인드', [0, 2.24, .06], [w - .14, .7, .015], 'fabric', '#e6e0d1', .003), box('블라인드 케이스', [0, 2.58, .07], [w - .08, .06, .07], 'white', '#ecebe4', .01));
+      return parts;
+    }
+    case 'door': {
+      // 경첩이 원점, 문짝은 +x 방향. leather: 주황 가죽 누빔 방음문(양면), 아니면 원목 문.
+      const parts: Part[] = [box('문짝', [.49, 1.05, 0], [.98, 2.08, .06], item.leather ? 'white' : 'wood', item.leather ? '#a7a49b' : '#d6c3a0', .008)];
+      if (item.leather) for (const side of [-1, 1]) {
+        parts.push(box('가죽 누빔 판', [.49, 1.1, side * .036], [.6, 1.62, .02], 'leather', '#b8752f', .02));
+        for (const [row, y] of [.5, .82, 1.14, 1.46, 1.78].entries()) for (const x of row % 2 ? [.39, .59] : [.31, .49, .67]) parts.push({ ...cylinder('누빔 단추', [x, y, side * .05], [.026, .01, .026], 'metal', '#cfcfca'), rotation: [Math.PI / 2, 0, 0], collider: false });
+      } else parts.push(box('문 아래 띠', [.49, .12, .032], [.9, .16, .006], 'wood', '#c4b08c', .002));
+      for (const side of [-1, 1]) parts.push(box('문 손잡이', [.86, 1.02, side * .05], [.13, .025, .035], 'metal', '#b7bbb9', .008));
+      return parts;
+    }
+    case 'whiteboard': return [box('알루미늄 테두리', [0, 0, 0], [1.45, 1.02, .04], 'metal', '#b9bcba', .008), { ...box('화이트보드 면', [0, 0, .022], [1.38, .95, .008], 'white', '#ffffff', 0), texture: item.texture ?? 'rules' }, box('펜 받침', [0, -.53, .04], [1.2, .025, .06], 'metal', '#a5a9a7', .004)];
+    case 'chalkboard': return [box('칠판 테두리', [0, 0, 0], [1.62, 1.04, .05], 'metal', '#b9bdba', .008), { ...box('초록 칠판 면', [0, 0, .028], [1.54, .96, .008], 'black', '#2f3b36', 0), texture: 'chalk' }, box('분필 받침', [0, -.55, .05], [1.5, .03, .07], 'metal', '#a9aeab', .004)];
+    case 'projectorScreen': return [box('스크린 검은 테두리', [0, 0, .01], [2, 1.3, .025], 'black', '#343b41', .004), box('흰색 스크린 면', [0, 0, .026], [1.94, 1.28, .008], 'white', '#e2e5dc', 0), box('흰색 롤스크린 케이스', [0, .69, .025], [2.14, .06, .075], 'white', '#e3e6dc', .015), box('스크린 하단 봉', [0, -.66, .035], [2.06, .025, .035], 'metal', '#b2b7ad', .006)];
+    case 'wallClock': return [{ ...cylinder('시계 테두리', [0, 0, 0], [.4, .04, .4], 'black', '#2b3036'), rotation: [Math.PI / 2, 0, 0] }, { ...cylinder('시계 판', [0, 0, .022], [.36, .01, .36], 'white', '#f2f1ec'), rotation: [Math.PI / 2, 0, 0], texture: 'clock' }];
+    case 'wireBoard': return [box('철망 메모판', [0, 0, 0], [.62, .62, .012], 'metal', '#e9ebea', .004), ...[-.2, 0, .2].map(x => ({ ...box('붙여 둔 종이', [x, -.02, .012], [.16, .22, .004], 'paper', '#f2f1ec', 0), collider: false })), box('금연 표지', [-.27, -.46, .006], [.26, .1, .006], 'paper', '#f3f2ee', 0), { ...box('금연 표시', [-.35, -.46, .011], [.06, .06, .003], 'paper', '#c8352f', 0), collider: false }];
+    case 'poster': return [box('포스터 종이', [0, 0, 0], [.42, .6, .006], 'paper', '#d8c9a4', 0), { ...box('포스터 그림', [0, .04, .005], [.34, .38, .003], 'paper', '#7e6aa8', 0), collider: false }];
+    case 'glassPane': {
+      const width = item.width ?? 3, h = item.height ?? 1.1;
+      return [-.035, .035].map(z => box('관찰창 이중 유리', [0, 0, z], [width, h, .012], 'glass', '#a9c2c6', .002));
+    }
+    case 'waterPurifier': {
+      // 흰색 스탠드형 정수기: 위쪽 검은 조작부(파란 표시등), 출수구, 물받이, 아래 수납장.
+      const parts: Part[] = [box('정수기 몸체', [0, .62, -.02], [.34, 1.24, .42], 'white', '#eceeed', .04), box('조작 패널', [0, 1.1, .195], [.28, .16, .012], 'black', '#24282b', .01)];
+      for (const [i, color] of ['#5aa9e6', '#e65a5a', '#d8dcdc'].entries()) parts.push({ ...cylinder('출수 버튼', [-.08 + i * .08, 1.1, .204], [.04, .008, .04], 'paper', color), rotation: [Math.PI / 2, 0, 0], collider: false });
+      parts.push({ ...box('표시등', [0, 1.155, .203], [.12, .015, .004], 'screen', '#7cc6ff', 0), collider: false });
+      parts.push(box('출수 공간', [0, .86, .14], [.24, .3, .14], 'black', '#3a3f43', .02), box('출수구', [0, .99, .17], [.05, .04, .06], 'metal', '#c9cdcd'), box('물받이', [0, .73, .19], [.24, .03, .1], 'metal', '#9aa0a1'));
+      parts.push(box('아래 수납장 문', [0, .34, .2], [.3, .5, .012], 'white', '#e2e5e4', .008), box('문 손잡이', [.11, .45, .21], [.02, .1, .02], 'metal', '#b5b9b9'));
+      parts.push(box('위에 놓인 종이컵', [.09, 1.29, -.05], [.07, .1, .07], 'paper', '#f1eee6', .02));
+      return parts;
+    }
     case 'equipmentStack': {
       const parts = [box('장비장 상판', [0, .93, 0], [.78, .04, .56], 'black', '#1f2224'), box('장비장 측판', [-.37, .47, 0], [.04, .9, .56], 'black', '#1f2224'), box('장비장 측판', [.37, .47, 0], [.04, .9, .56], 'black', '#1f2224')];
       for (const [i, y] of [.15, .45, .74].entries()) {

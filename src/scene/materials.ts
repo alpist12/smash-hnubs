@@ -2,6 +2,7 @@ import { CanvasTexture, RepeatWrapping, SRGBColorSpace, NoColorSpace, MeshStanda
 import type { Finish } from '../data/types';
 import { ROOM } from '../data/room';
 import { useGame } from '../game/store';
+import { wallTexture } from './wallTextures';
 
 function texture(kind: 'wood' | 'fabric' | 'leather' | 'carpet' | 'screen') {
   const c = document.createElement('canvas'); c.width = c.height = 512;
@@ -57,4 +58,16 @@ export function material(finish: Finish, color?: string, damage = false, vertica
     cache.set(key, m);
   }
   return cache.get(key)!;
+}
+
+const textured = new Map<string, MeshStandardMaterial>();
+/** 그림이 있는 부품(화이트보드·칠판·시계 면). */
+export function texturedMaterial(key: string, damage = false) {
+  const id = `${key}:${damage}`;
+  if (!textured.has(id)) {
+    const m = new MeshStandardMaterial({ map: wallTexture(key), roughness: key === 'chalk' ? .95 : .4 });
+    if (damage) m.color.setScalar(.62);
+    textured.set(id, m);
+  }
+  return textured.get(id)!;
 }

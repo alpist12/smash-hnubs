@@ -47,6 +47,10 @@ function Objects({ items, selected, mode, select, commit, report }: { items: Ite
     finally { setTimeout(() => { dragging.current = false; }, 0); }
   }
   return <>
+    {/* 벽·문·벽 부착물(고정 물체)은 보이기만 하고 편집하지 않는다. 천장 조명은 위에서 보는 시야를 가려 뺀다. */}
+    {items.filter(item => item.fixed && item.kind !== 'light').map(item => <group key={item.id} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1}>
+      {model(item).map((part, i) => <PartMesh key={i} part={part} />)}
+    </group>)}
     {items.filter(item => !item.fixed).map(item => <group key={item.id} ref={object => { if (object) refs.current.set(item.id, object); else refs.current.delete(item.id); }} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1}
       onClick={event => { event.stopPropagation(); if (!dragging.current && event.delta < 5) select(item.id); }}>
       {model(item).map((part, i) => <PartMesh key={i} part={part} />)}
@@ -95,7 +99,7 @@ function Editor() {
   }
   return <main className="editor-shell" style={{ pointerEvents: saving ? 'none' : undefined }}>
     <aside className="editor-panel">
-      <header><h1>HNUBS 배치 편집기</h1><p>제작자 전용 · 이 컴퓨터에서만 사용</p></header>
+      <header><h1>HNUBS <span>배치 편집기</span></h1><p>제작자 전용 · 이 컴퓨터에서만 사용</p></header>
       <p className="intro">가구 선택 → 화살표로 이동 → 게임에 반영<br/>책상 위 기기와 소품도 함께 움직입니다.</p>
       <label className="field-label">선택한 가구<select aria-label="편집할 가구" value={selected} onChange={event => setSelected(event.target.value)}><option value="">가구를 선택하세요</option>{items.filter(item => !item.fixed).map(item => <option key={item.id} value={item.id}>{item.snackCounter ? '간식대' : specs[item.kind].label} · {item.id}</option>)}</select></label>
       <div className="editor-modes"><button aria-pressed={mode === 'translate'} onClick={() => setMode('translate')}>이동</button><button aria-pressed={mode === 'rotate'} onClick={() => setMode('rotate')}>회전</button><button onClick={() => setView(v => v + 1)}>{view % 2 ? '위에서 보기' : '입체 보기'}</button></div>
@@ -115,7 +119,7 @@ function Editor() {
     </aside>
     <div className="editor-stage">
       {items.length > 0 && <Canvas shadows dpr={GRAPHICS.high.dpr} camera={{ position: [0, 21, .01], fov: 40, near: .1, far: 150 }} gl={{ antialias: true, powerPreference: 'high-performance' }} onContextMenu={event => event.preventDefault()}>
-        <color attach="background" args={['#20292f']} /><Lighting />
+        <color attach="background" args={['#dfe2e4']} /><Lighting />
         <Suspense fallback={null}><Physics paused colliders={false}><Room /><Studios /></Physics><Objects items={items} selected={selected} mode={mode} select={setSelected} commit={edit} report={setError}/></Suspense>
         <EditorCamera view={view}/>
       </Canvas>}
