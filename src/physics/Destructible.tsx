@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { RigidBody, CuboidCollider, type RapierRigidBody } from '@react-three/rapier';
 import { Euler, MeshBasicMaterial, Quaternion, Vector3 } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
-import type { Item, V3, Debris } from '../data/types';
+import type { Item, Part, V3, Debris } from '../data/types';
 import { ITEMS, specs } from '../data/room';
 import { fractureParts } from './fracture';
 import { model } from '../scene/models';
@@ -56,9 +56,9 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         // 1) 맞은 자리에 금(크랙)이 생기고, 손상이 쌓일수록 길고 많아진다.
         const t = rb.translation(), r = rb.rotation(), inv = new Quaternion(r.x, r.y, r.z, r.w).invert(), scale = item.scale ?? 1;
         const local = new Vector3(...location).sub(new Vector3(t.x, t.y, t.z)).applyQuaternion(inv).divideScalar(scale);
-        const normal = local.clone().sub(new Vector3(0, centerY, 0)); normal.y *= .35; if (normal.lengthSq() < 1e-6) normal.set(0, 0, 1); normal.normalize();
+        const surface = surfaceAt(parts, local);
         const ratio = damage.current / spec.threshold;
-        if (amount >= 6 && (amount >= 15 || Math.random() < .25)) setCracks(list => [...list.slice(-11), { pos: local.addScaledVector(normal, .006).toArray() as V3, normal: normal.toArray() as V3, size: .12 + ratio * .35 + Math.min(.15, amount / 400), seed: Math.floor(now) % 997 + list.length * 31 }]);
+        if (surface && amount >= 6 && (amount >= 15 || Math.random() < .25)) setCracks(list => [...list.slice(-11), { pos: surface.pos, normal: surface.normal, size: Math.min(surface.maxSize, .12 + ratio * .35 + Math.min(.15, amount / 400)), seed: Math.floor(now) % 997 + list.length * 31 }]);
         // 2) 맞을 때마다 부스러기 가루가 흩날린다.
         if (amount >= 6 && now - lastDust.current > 90) { lastDust.current = now; useGame.getState().addEffect({ id: nextEffectId(), type: 'dust', point: [...location], born: now, radius: Math.min(1, .25 + amount / 120), colors: chipColors }); }
         // 3) 33%·66%를 넘을 때 작은 부품(손잡이·버튼·소품)이 실제로 떨어져 나간다.
@@ -161,6 +161,32 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
 });
 
 interface Crack { pos: V3; normal: V3; size: number; seed: number }
+/**
+ * 맞은 지점에서 가장 가까운 부품 겉면을 찾아, 그 면 위에 금을 눕힌다(허공에 뜨지 않게).
+ * 금 크기는 그 면 안에 들어오도록 제한한다.
+ */
+function surfaceAt(parts: Part[], local: Vector3): { pos: V3; normal: V3; maxSize: number } | null {
+  let best: { pos: V3; normal: V3; maxSize: number } | null = null, bestDist = Infinity;
+  for (const part of parts) {
+    if (part.shape === 'cylinder' || part.collider === false || part.finish === 'glass') continue;
+    const rot = part.rotation ? new Quaternion().setFromEuler(new Euler(...part.rotation)) : new Quaternion();
+    const p = local.clone().sub(new Vector3(...part.pos)).applyQuaternion(rot.clone().invert()), half = part.size.map(n => n / 2);
+    // 박스 바깥이면 박스까지 거리, 안이면 0으로 보고 가장 가까운 면을 고른다.
+    const outside = Math.hypot(...[0, 1, 2].map(a => Math.max(0, Math.abs(p.getComponent(a)) - half[a])));
+    let axis = 0, gap = Infinity;
+    for (let a = 0; a < 3; a++) { const g = Math.abs(half[a] - Math.abs(p.getComponent(a))); if (g < gap) { gap = g; axis = a; } }
+    const dist = outside + gap * .01;
+    if (dist >= bestDist || outside > .25) continue;
+    const sign = p.getComponent(axis) >= 0 ? 1 : -1, onFace = p.clone();
+    for (let a = 0; a < 3; a++) onFace.setComponent(a, Math.max(-half[a], Math.min(half[a], onFace.getComponent(a))));
+    onFace.setComponent(axis, sign * (half[axis] + .004));
+    const normal = new Vector3().setComponent(axis, sign).applyQuaternion(rot);
+    const others = [0, 1, 2].filter(a => a !== axis).map(a => part.size[a]);
+    bestDist = dist;
+    best = { pos: onFace.applyQuaternion(rot).add(new Vector3(...part.pos)).toArray() as V3, normal: normal.toArray() as V3, maxSize: Math.max(.03, Math.min(...others) * .3) };
+  }
+  return best;
+}
 const crackMaterial = new MeshBasicMaterial({ color: '#1d1714', transparent: true, opacity: .85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
 /** 맞은 자리의 갈라진 금: 중심에서 3~5갈래로 뻗고, 갈래 끝에서 한 번 더 갈라진다. */
 function CrackMark({ crack }: { crack: Crack }) {
