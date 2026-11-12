@@ -34,7 +34,7 @@ export default function GameScene() {
     window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop); window.addEventListener('blur', stop);
     return () => { window.removeEventListener('pointerup', stop); window.removeEventListener('pointercancel', stop); window.removeEventListener('blur', stop); };
   }, []);
-  return <Canvas shadows={quality === 'high'} dpr={GRAPHICS[quality].dpr} camera={{ position: [8, 8.5, 10.5], fov: 36, near: .1, far: 120 }} gl={{ antialias: true, powerPreference: 'high-performance' }} onContextMenu={e => e.preventDefault()} onDoubleClick={() => focusOn(aim.point)}>
+  return <Canvas shadows={quality === 'high'} dpr={GRAPHICS[quality].dpr} camera={{ position: [8, 8.5, 10.5], fov: 36, near: .1, far: 120 }} gl={{ antialias: true, powerPreference: 'high-performance' }} onContextMenu={e => e.preventDefault()} onDoubleClick={() => { if (!aim.target) focusOn(aim.point); }}>
     <color attach="background" args={['#dfe2e4']} />
     <fog attach="fog" args={['#dfe2e4', 38, 90]} />
     <Lighting quality={quality} />

@@ -6,7 +6,7 @@ import type { V3 } from '../data/types';
 
 export interface Target { point: () => Vector3; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean) => void }
 export const targets = new Map<string, Target>();
-export const aim = { point: [0, .78, .4] as V3, target: '', holding: false, last: -10, shake: 0, camera: [8, 8.5, 10.5] as V3 };
+export const aim = { point: [0, .78, .4] as V3, target: '', holding: false, last: -10, shake: 0, camera: [8, 8.5, 10.5] as V3, normal: [0, 1, 0] as V3 };
 let serial = 0;
 let bombs: { at: number; point: V3; round: number }[] = [];
 let missiles: { at: number; point: V3; round: number; target: string }[] = [];

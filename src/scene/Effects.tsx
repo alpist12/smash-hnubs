@@ -210,7 +210,11 @@ export function Effects() {
   useFrame(({ camera }) => {
     aim.camera = camera.position.toArray() as V3;
     tickAttacks();
-    if (cursor.current) { cursor.current.position.lerp(new Vector3(...aim.point), .4); cursor.current.visible = !!aim.target; }
+    if (cursor.current) {
+      const normal = new Vector3(...aim.normal).normalize();
+      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = !!aim.target;
+      cursor.current.quaternion.slerp(new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), normal), .35);
+    }
     if (performance.now() - lastCleanup.current > 1000) {
       lastCleanup.current = performance.now(); const state = useGame.getState(), now = performance.now();
       const debris = state.debris.filter(d => now - d.born < (state.quality === 'low' ? 7000 : 11000));
@@ -221,7 +225,8 @@ export function Effects() {
   return <>
     {effects.map(effect => <EffectView key={effect.id} effect={effect} />)}
     <group ref={cursor}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .025, 0]}><ringGeometry args={[.17, .187, 32]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.8} depthTest={false} /></mesh>
+      <mesh><ringGeometry args={[.17, .187, 32]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>
+      <mesh><circleGeometry args={[.035, 16]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>
     </group>
     <BatSwing effects={effects} />
     <LaserBeam />

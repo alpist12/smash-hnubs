@@ -385,7 +385,7 @@
     "pos": [
       5.394775,
       0,
-      2.905995
+      3.2
     ],
     "rotation": -1.5707963267948966,
     "scale": 1
@@ -394,7 +394,7 @@
     "pos": [
       5.334775,
       0.8,
-      2.905995
+      3.2
     ],
     "rotation": 1.5707963267948966,
     "scale": 1,
@@ -404,7 +404,7 @@
     "pos": [
       5.674775,
       0.8,
-      2.905995
+      3.2
     ],
     "rotation": 1.5707963267948966,
     "scale": 1,
@@ -414,7 +414,7 @@
     "pos": [
       5.674775,
       0.8,
-      3.265995
+      3.56
     ],
     "rotation": 0,
     "scale": 1,
@@ -424,7 +424,7 @@
     "pos": [
       5.344775,
       0.8,
-      2.555995
+      2.85
     ],
     "rotation": 0,
     "scale": 1,
@@ -434,7 +434,7 @@
     "pos": [
       5.274775,
       0.8,
-      3.405995
+      3.7
     ],
     "rotation": 0,
     "scale": 1,
@@ -536,11 +536,11 @@
   },
   "fridge-56": {
     "pos": [
-      -6.67,
+      -0.5,
       0,
-      -1.15
+      4
     ],
-    "rotation": 1.5707963267948966,
+    "rotation": 3.1415926535897936,
     "scale": 1
   },
   "cabinet-57": {
@@ -606,6 +606,518 @@
     "rotation": -1.5707963267948966,
     "scale": 1
   },
+  "desk-73": {
+    "pos": [
+      2.4,
+      0.12,
+      -9.4
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "mixer-74": {
+    "pos": [
+      3.55,
+      0.92,
+      -9.38
+    ],
+    "rotation": 0,
+    "scale": 0.55,
+    "parentId": "desk-73"
+  },
+  "monitor-75": {
+    "pos": [
+      1.05,
+      0.92,
+      -9.65
+    ],
+    "rotation": 0,
+    "scale": 0.78,
+    "parentId": "desk-73"
+  },
+  "monitor-76": {
+    "pos": [
+      2.2,
+      0.92,
+      -9.65
+    ],
+    "rotation": 0,
+    "scale": 0.7,
+    "parentId": "desk-73"
+  },
+  "keyboard-77": {
+    "pos": [
+      1.05,
+      0.92,
+      -9.15
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-73"
+  },
+  "mouse-78": {
+    "pos": [
+      1.5,
+      0.92,
+      -9.15
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-73"
+  },
+  "microphone-79": {
+    "pos": [
+      2.85,
+      0.92,
+      -9.5
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 0.8,
+    "parentId": "desk-73"
+  },
+  "book-80": {
+    "pos": [
+      0.55,
+      0.92,
+      -9.25
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-73"
+  },
+  "speaker-81": {
+    "pos": [
+      -0.05,
+      2.18,
+      -9.78
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "speaker-82": {
+    "pos": [
+      3.25,
+      2.18,
+      -9.78
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "rack-83": {
+    "pos": [
+      -1.55,
+      0.12,
+      -9.5
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "equipmentStack-84": {
+    "pos": [
+      -0.55,
+      0.12,
+      -9.58
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "monitor-85": {
+    "pos": [
+      -0.55,
+      1.07,
+      -9.6
+    ],
+    "rotation": 0,
+    "scale": 0.72
+  },
+  "keyboard-86": {
+    "pos": [
+      -0.62,
+      0.92,
+      -9.05
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "chair-87": {
+    "pos": [
+      2,
+      0.12,
+      -8.35
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "desk-88": {
+    "pos": [
+      5.6,
+      0.12,
+      -9.4
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "carton-89": {
+    "pos": [
+      5.25,
+      0.92,
+      -9.5
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-88"
+  },
+  "carton-90": {
+    "pos": [
+      5.25,
+      1.34,
+      -9.5
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-88"
+  },
+  "carton-91": {
+    "pos": [
+      6.2,
+      0.92,
+      -9.55
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "desk-88"
+  },
+  "mediaCabinet-92": {
+    "pos": [
+      -2.6,
+      0.12,
+      -4.82
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "mediaCabinet-93": {
+    "pos": [
+      -1.3,
+      0.12,
+      -4.82
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "mediaCabinet-94": {
+    "pos": [
+      0.1,
+      0.12,
+      -4.82
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "carton-95": {
+    "pos": [
+      0.45,
+      2.27,
+      -4.82
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "carton-96": {
+    "pos": [
+      -0.95,
+      2.27,
+      -4.85
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "mixer-98": {
+    "pos": [
+      6.55,
+      0.92,
+      -5.1
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 0.8,
+    "parentId": "desk-97"
+  },
+  "carton-99": {
+    "pos": [
+      -6.55,
+      0,
+      -7.6
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "anchorDesk-106": {
+    "pos": [
+      1.6,
+      0,
+      -10.75
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "monitor-107": {
+    "pos": [
+      2.15,
+      0.79,
+      -10.58
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 0.62,
+    "parentId": "anchorDesk-106"
+  },
+  "monitor-108": {
+    "pos": [
+      1.05,
+      0.79,
+      -10.58
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 0.62,
+    "parentId": "anchorDesk-106"
+  },
+  "keyboard-109": {
+    "pos": [
+      2.05,
+      0.79,
+      -10.9
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "parentId": "anchorDesk-106"
+  },
+  "headphones-110": {
+    "pos": [
+      1.35,
+      0.79,
+      -10.92
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "anchorDesk-106"
+  },
+  "headphones-111": {
+    "pos": [
+      2.6,
+      0.79,
+      -10.9
+    ],
+    "rotation": 0.5,
+    "scale": 1,
+    "parentId": "anchorDesk-106"
+  },
+  "micStand-112": {
+    "pos": [
+      2.55,
+      0,
+      -11.55
+    ],
+    "rotation": -1.5184364492350702,
+    "scale": 1
+  },
+  "sledChair-113": {
+    "pos": [
+      1,
+      0,
+      -11.75
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "sideTable-114": {
+    "pos": [
+      6.15,
+      0,
+      -10.5
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "paSpeaker-115": {
+    "pos": [
+      6.1,
+      0.52,
+      -10.5
+    ],
+    "rotation": 2.8902652413026098,
+    "scale": 1
+  },
+  "metalCabinet-116": {
+    "pos": [
+      -0.85,
+      0,
+      -10.4
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "floorSofa-117": {
+    "pos": [
+      -2.75,
+      0,
+      -10.6
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "ottoman-118": {
+    "pos": [
+      -3.3,
+      0,
+      -12.2
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "floorCushion-119": {
+    "pos": [
+      -6.55,
+      0,
+      -11.7
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "paSpeaker-120": {
+    "pos": [
+      -6.35,
+      0,
+      -15.6
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "paSpeaker-121": {
+    "pos": [
+      -5.7,
+      0,
+      -15.6
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "paSpeaker-122": {
+    "pos": [
+      -6.35,
+      1.05,
+      -15.6
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "carton-123": {
+    "pos": [
+      -5.7,
+      1,
+      -15.6
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "extinguisher-124": {
+    "pos": [
+      -5.15,
+      0,
+      -15.7
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "metalShelf-125": {
+    "pos": [
+      -4.55,
+      0,
+      -15.7
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "stand-126": {
+    "pos": [
+      0.9,
+      0,
+      -15.45
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
+  "table-127": {
+    "pos": [
+      2.2,
+      0,
+      -14.7
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "book-128": {
+    "pos": [
+      2.7,
+      0.8,
+      -14.75
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "parentId": "table-127"
+  },
+  "sledChair-129": {
+    "pos": [
+      1.6,
+      0,
+      -15.3
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "foldingChair-130": {
+    "pos": [
+      3.6,
+      0,
+      -14.9
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1
+  },
+  "foldingChair-131": {
+    "pos": [
+      -1.5,
+      0,
+      -14.8
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "ampRack-132": {
+    "pos": [
+      5.9,
+      0,
+      -15.65
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "carton-133": {
+    "pos": [
+      4.7,
+      0,
+      -15.7
+    ],
+    "rotation": 0,
+    "scale": 1
+  },
+  "waterPurifier-140": {
+    "pos": [
+      -1.05,
+      0,
+      3.95
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1
+  },
   "copy-partition-72-1": {
     "pos": [
       -2.8,
@@ -650,7 +1162,7 @@
     "pos": [
       6.15,
       0,
-      2.95
+      3.3
     ],
     "rotation": -1.5707963267948966,
     "scale": 1,
@@ -730,5 +1242,45 @@
     "rotation": -1.5707963267948966,
     "scale": 1,
     "sourceId": "chair-13"
+  },
+  "copy-desk-88-1": {
+    "pos": [
+      5.7,
+      0.12,
+      -5.1
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "sourceId": "desk-88"
+  },
+  "copy-mediaCabinet-94-1": {
+    "pos": [
+      1.5,
+      0.12,
+      -4.8
+    ],
+    "rotation": 3.141592653589793,
+    "scale": 1,
+    "sourceId": "mediaCabinet-94"
+  },
+  "copy-desk-88-2": {
+    "pos": [
+      4.15,
+      0.12,
+      -5.1
+    ],
+    "rotation": 0,
+    "scale": 1,
+    "sourceId": "desk-88"
+  },
+  "desk-97": {
+    "pos": [
+      6.45,
+      0.12,
+      -6.9
+    ],
+    "rotation": -1.5707963267948966,
+    "scale": 1,
+    "hidden": true
   }
 }

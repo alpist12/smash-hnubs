@@ -11,10 +11,10 @@ export function model(item: Item): Part[] {
       const low = item.kind === 'table' && item.color === '#342c29';
       const h = low ? .43 : .76, d = item.depth ?? (item.kind === 'desk' ? .72 : low ? .65 : 1);
       if (item.broadcastDesk) {
-        const parts = [box('검은 작업대 테두리', [0, .75, 0], [w, .09, d], 'black', '#332e2c'), box('주황색 작업대 상판', [0, .789, -.015], [w - .035, .012, d - .065], 'wood', item.color ?? '#c1652d', .012)];
+        const parts = [box('검은 작업대 테두리', [0, .75, 0], [w, .09, d], 'black', '#332e2c'), box('주황색 작업대 상판', [0, .792, -.015], [w - .035, .012, d - .065], 'wood', item.color ?? '#c1652d', .012)];
         for (const x of [-w / 2 + .08, w / 2 - .08]) parts.push(box('작업대 측판', [x, .37, 0], [.075, .74, d - .08], 'black', '#36302c'));
         parts.push(box('작업대 뒷판', [0, .49, -d / 2 + .06], [w - .16, .44, .055], 'black', '#403630'));
-        parts.push(cylinder('케이블 통과구', [w / 2 - .18, .812, -d / 2 + .18], [.075, .008, .075], 'black'));
+        parts.push(cylinder('케이블 통과구', [w / 2 - .18, .8, -d / 2 + .18], [.075, .008, .075], 'black'));
         return parts;
       }
       const parts = [box('상판', [0, h, 0], [w, .065, d], item.trim ? 'white' : 'wood', item.color ?? '#d0ae65', item.trim ? .03 : .025)];
@@ -301,7 +301,22 @@ export function model(item: Item): Part[] {
     case 'headphones': return [{ ...box('헤드밴드', [0, .17, 0], [.17, .025, .04], 'black', '#202326', .01) }, cylinder('왼쪽 이어컵', [-.08, .08, 0], [.08, .14, .08], 'black', '#26292c'), cylinder('오른쪽 이어컵', [.08, .08, 0], [.08, .14, .08], 'black', '#26292c')];
     case 'wallSegment': {
       // 메인룸 벽 한 구간: 하단 원목 → 하늘색 흡음 띠 → 상단 원목. bottom>0이면 문 위 상인방.
-      const b = item.bottom ?? 0, h = 2.8 - b, parts: Part[] = [box('벽체', [0, b + h / 2, 0], [w, h, .1], 'white', '#c9bda6', .004)];
+      const b = item.bottom ?? 0, h = (item.height ?? 2.8) - b;
+      if (item.acoustic) {
+        // 부스 벽: 흰 줄눈이 들어간 파란 회색 흡음 패널(그림), 아래 원목 걸레받이.
+        const key = `acoustic:${w.toFixed(3)}:${h.toFixed(3)}:${b.toFixed(2)}`, sides = item.acoustic === 'both' ? [1, -1] : [1];
+        const parts: Part[] = [box('부스 벽체', [0, b + h / 2, 0], [w, h, .1], 'white', '#e7ecef', .003)];
+        for (const side of sides) {
+          parts.push({ ...box('흡음 패널 면', [0, b + h / 2, side * .056], [w - .004, h - .004, .012], 'fabric', '#8697aa', 0), texture: key, rotation: side < 0 ? [0, Math.PI, 0] : undefined });
+          if (b === 0) parts.push(box('원목 걸레받이', [0, .06, side * .072], [w, .12, .025], 'wood', '#bfa77f', .003));
+        }
+        if (item.jambs) {
+          for (const x of [-w / 2 - .03, w / 2 + .03]) parts.push({ ...box('문틀', [x, 1.05, 0], [.07, 2.1, .18], 'wood', '#cdb791', .004), collider: false });
+          parts.push(box('문틀 위', [0, 2.1, 0], [w + .13, .07, .18], 'wood', '#cdb791', .004));
+        }
+        return parts;
+      }
+      const parts: Part[] = [box('벽체', [0, b + h / 2, 0], [w, h, .1], 'white', '#c9bda6', .004)];
       const panels = (y: number, height: number, pitch: number, finish: Finish, color: string, name: string) => {
         const n = Math.max(1, Math.round(w / pitch));
         for (let i = 0; i < n; i++) parts.push(box(name, [-w / 2 + (i + .5) * w / n, y, .065], [w / n - .012, height, .03], finish, color, .004));
@@ -348,7 +363,12 @@ export function model(item: Item): Part[] {
     case 'poster': return [box('포스터 종이', [0, 0, 0], [.42, .6, .006], 'paper', '#d8c9a4', 0), { ...box('포스터 그림', [0, .04, .005], [.34, .38, .003], 'paper', '#7e6aa8', 0), collider: false }];
     case 'glassPane': {
       const width = item.width ?? 3, h = item.height ?? 1.1;
-      return [-.035, .035].map(z => box('관찰창 이중 유리', [0, 0, z], [width, h, .012], 'glass', '#a9c2c6', .002));
+      const parts: Part[] = [-.035, .035].map(z => box('관찰창 이중 유리', [0, 0, z], [width, h, .012], 'glass', '#a9c2c6', .002));
+      if (item.jambs) for (const side of [-1, 1]) {
+        parts.push(box('원목 창틀', [side * (width / 2 + .07), 0, 0], [.16, h + .3, .22], 'wood', '#cdb791', .006));
+        parts.push(box('원목 창틀', [0, side * (h / 2 + .07), 0], [width + .3, .16, .22], 'wood', '#cdb791', .006));
+      }
+      return parts;
     }
     case 'waterPurifier': {
       // 흰색 스탠드형 정수기: 위쪽 검은 조작부(파란 표시등), 출수구, 물받이, 아래 수납장.

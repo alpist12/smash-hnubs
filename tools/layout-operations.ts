@@ -46,7 +46,7 @@ export function duplicateItems(items: Item[], id: string) {
   const selected = items.find(item => item.id === id);
   if (!selected || selected.fixed) throw new Error('복사할 가구를 선택하세요.');
   const group = items.filter(item => item.id === id || onTop(selected, item));
-  if (items.length + group.length > 200) throw new Error('성능을 위해 가구는 최대 200개까지 배치할 수 있습니다.');
+  if (items.filter(item => !item.fixed).length + group.length > 200) throw new Error('성능을 위해 가구는 최대 200개까지 배치할 수 있습니다.');
   for (const [dx, dz] of [[.4, .4], [-.4, .4], [.4, -.4], [-.4, -.4], [0, 0]]) {
     const ids = new Set(items.map(item => item.id));
     try {

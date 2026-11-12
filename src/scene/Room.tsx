@@ -16,7 +16,7 @@ function B({ pos, size, color, finish = 'wood' }: { pos: V3; size: V3; color?: s
 export function backWallVisible(_walls: boolean, cameraZ: number) { return wallVisible('back', 0, cameraZ); }
 export function Room() {
   const ceiling = useGame(s => s.ceiling), high = useGame(s => s.quality === 'high');
-  function floorAim(e: ThreeEvent<PointerEvent>) { e.stopPropagation(); aim.point = e.point.toArray() as V3; aim.target = ''; }
+  function floorAim(e: ThreeEvent<PointerEvent>) { e.stopPropagation(); aim.point = e.point.toArray() as V3; aim.target = ''; aim.normal = [0, 1, 0]; }
   return <group name="HNUBS-room-architecture">
     <RigidBody type="fixed" colliders={false}>
       <CuboidCollider position={[0, -.12, 0]} args={[ROOM.width / 2 + .05, .12, ROOM.depth / 2 + .05]} />

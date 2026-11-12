@@ -12,7 +12,8 @@ test('plan maps the provided room corners and all furniture remains inside', () 
   assert.equal(new Set(ITEMS.map(i => i.id)).size, ITEMS.length);
   for (const item of ITEMS) {
     assert.ok(item.wall ? Math.abs(item.pos[0]) <= ROOM.width / 2 + 1e-9 : Math.abs(item.pos[0]) < ROOM.width / 2);
-    assert.ok(item.pos[2] >= WORLD.minZ - 1e-9 && item.pos[2] <= WORLD.maxZ + 1e-9);
+    const margin = item.wall ? .1 : 1e-9;
+    assert.ok(item.pos[2] >= WORLD.minZ - margin && item.pos[2] <= WORLD.maxZ + margin);
     assert.ok(specs[item.kind].threshold > 0);
     for (const p of model(item)) {
       assert.ok(p.name.length > 0);

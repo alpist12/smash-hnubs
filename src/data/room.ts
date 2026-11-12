@@ -3,6 +3,7 @@ import { BOOTH_DOOR, BOOTH_WALL_Z, BOOTH_WINDOW, STUDIO_END, STUDIO_START } from
 export { WORLD } from './studios';
 import savedLayout from './layout.json';
 import { applyLayout } from './layout';
+import { readLocalLayout } from './localLayout';
 
 // shortcut: 실측이 없는 사진 기반 추정치. 실측 후 이 값과 아래 배치만 조정한다.
 export const ROOM = { width: 14, depth: 9, height: 2.8, wainscot: 1.02 };
@@ -182,15 +183,15 @@ add('stand', [.9, 0, far + .55], { rotation: Math.PI });
 const marble = add('table', [2.2, 0, far + 1.3], { width: 1.5, depth: .75, color: '#e6e4de' });
 add('book', [2.7, .8, far + 1.25], { parentId: marble.id, color: '#f1efe8' });
 add('sledChair', [1.6, 0, far + .7], { color: '#9d9890' });
-add('foldingChair', [3.6, 0, far + 1.1], { rotation: -.5 });
-add('foldingChair', [-1.5, 0, far + 1.2], { rotation: .3 });
+add('foldingChair', [3.6, 0, far + 1.1], { rotation: -Math.PI / 2 });
+add('foldingChair', [-1.5, 0, far + 1.2]);
 add('ampRack', [5.9, 0, far + .35]);
 add('carton', [4.7, 0, far + .3], { width: .55, height: .45 });
 for (const x of [-3.5, .5, 4.5]) for (const z of [W - 1.6, far + 1.8]) add('light', [x, 2.72, z], { fixed: true });
 // 냉장고 옆 정수기 (사용자 요청). 기존 가구 ID를 지키려고 마지막에 추가한다.
 add('waterPurifier', [-1.5, 0, ROOM.depth / 2 - .3], { rotation: Math.PI });
 // ── 부술 수 있는 벽·문·벽 부착물 (모두 고정 물체, 기존 가구 ID 보존을 위해 마지막에 추가) ──
-type Side = Exclude<WallSide, 'booth'>;
+type Side = Extract<WallSide, 'back' | 'front' | 'left' | 'right'>;
 const WALLS: Record<Side, { origin: [number, number]; angle: number; length: number }> = {
   back: { origin: [0, -ROOM.depth / 2], angle: 0, length: ROOM.width },
   front: { origin: [0, ROOM.depth / 2], angle: Math.PI, length: ROOM.width },
@@ -231,15 +232,36 @@ mount('whiteboard', 'back', .45, 1.62, .15, { texture: 'calendar' });
 mount('wireBoard', 'back', 1.62, 1.68, .13);
 mount('poster', 'back', -2.65, 1.62, .13);
 mount('projectorScreen', 'front', BACK_DOOR, 1.68, .15);
-mount('chalkboard', 'front', -ROOM.width * (.3 / 8.8) + .9, 1.62, .13);
+// 간식 책상(desk-26, x≈1.0) 바로 위로 칠판을 맞춘다. 앞벽은 180° 돌아 있어 벽 좌표는 부호가 반대다.
+mount('chalkboard', 'front', -1.005806, 1.62, .13);
 mount('wallClock', 'right', 0, 2.28, .2);
 // 기술부스↔아나부스: 방음문과 관찰창 이중 유리.
 add('door', [BOOTH_DOOR.x - BOOTH_DOOR.width / 2 + .02, 0, BOOTH_WALL_Z + .06], { rotation: -1.05, wall: 'booth', fixed: true, leather: true });
-add('glassPane', [BOOTH_WINDOW.x, (BOOTH_WINDOW.bottom + BOOTH_WINDOW.top) / 2, BOOTH_WALL_Z], { width: BOOTH_WINDOW.width, height: BOOTH_WINDOW.top - BOOTH_WINDOW.bottom, wall: 'booth', fixed: true });
+add('glassPane', [BOOTH_WINDOW.x, (BOOTH_WINDOW.bottom + BOOTH_WINDOW.top) / 2, BOOTH_WALL_Z], { width: BOOTH_WINDOW.width, height: BOOTH_WINDOW.top - BOOTH_WINDOW.bottom, wall: 'booth', fixed: true, jambs: true });
+// 부스 흡음벽(부스 사이 벽 · 아나부스 맞은편 벽 · 부스 양옆 벽)도 부술 수 있다.
+function boothRun(from: number, to: number, place: (x: number, width: number) => Partial<Item>, max = 1.9) {
+  const n = Math.max(1, Math.ceil((to - from) / max - 1e-6)), width = (to - from) / n;
+  for (let i = 0; i < n; i++) { const x = from + (i + .5) * width; add('wallSegment', [0, 0, 0], { width, fixed: true, ...place(x, width) }); }
+}
+const DOOR_L = BOOTH_DOOR.x - BOOTH_DOOR.width / 2, DOOR_R = BOOTH_DOOR.x + BOOTH_DOOR.width / 2;
+const WIN_L = BOOTH_WINDOW.x - BOOTH_WINDOW.width / 2, WIN_R = BOOTH_WINDOW.x + BOOTH_WINDOW.width / 2;
+const booth = (x: number): Partial<Item> => ({ pos: [x, 0, BOOTH_WALL_Z], wall: 'booth', acoustic: 'both' });
+for (const [a, b] of [[-ROOM.width / 2, DOOR_L], [DOOR_R, WIN_L], [WIN_R, ROOM.width / 2]] as const) boothRun(a, b, booth);
+add('wallSegment', [BOOTH_DOOR.x, 0, BOOTH_WALL_Z], { width: BOOTH_DOOR.width, bottom: 2.1, jambs: true, wall: 'booth', acoustic: 'both', fixed: true });
+add('wallSegment', [BOOTH_WINDOW.x, 0, BOOTH_WALL_Z], { width: BOOTH_WINDOW.width, height: BOOTH_WINDOW.bottom, wall: 'booth', acoustic: 'both', fixed: true });
+add('wallSegment', [BOOTH_WINDOW.x, 0, BOOTH_WALL_Z], { width: BOOTH_WINDOW.width, bottom: BOOTH_WINDOW.top, wall: 'booth', acoustic: 'both', fixed: true });
+boothRun(-ROOM.width / 2, ROOM.width / 2, x => ({ pos: [x, 0, STUDIO_END - .06], wall: 'outer', acoustic: 'front' }));
+for (const sign of [-1, 1]) boothRun(STUDIO_END, STUDIO_START, z => ({ pos: [sign * ROOM.width / 2, 0, z], rotation: sign < 0 ? Math.PI / 2 : -Math.PI / 2, wall: sign < 0 ? 'studioLeft' : 'studioRight', acoustic: 'front' }));
 // 예전 뒷벽 흡음판 3장은 새 벽 패널과 겹치므로 목록에서 뺀다(다른 가구 ID는 그대로 유지된다).
 for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'panel') items.splice(i, 1);
 // 너무 쉽게 깨지지 않도록 모든 가구의 내구도를 2배로 (금·가루가 충분히 쌓인 뒤 깨진다).
 for (const spec of Object.values(specs)) spec.threshold *= 2;
 export const DEFAULT_ITEMS = items;
-export const ITEMS = applyLayout(DEFAULT_ITEMS, savedLayout);
+// /edit에서 이 브라우저에 저장한 배치가 있으면 그것을 쓰고, 문제가 있으면 기본 저장 배치로 돌아간다.
+function chooseLayout() {
+  const local = readLocalLayout();
+  if (local) try { return applyLayout(DEFAULT_ITEMS, local); } catch { /* 오래된 배치는 무시 */ }
+  return applyLayout(DEFAULT_ITEMS, savedLayout);
+}
+export const ITEMS = chooseLayout();
 export const TOTAL = ITEMS.length;

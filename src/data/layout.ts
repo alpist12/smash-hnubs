@@ -10,7 +10,7 @@ export function applyLayout(items: Item[], value: unknown): Item[] {
   for (const [id, entry] of Object.entries(entries)) {
     if (!entry || typeof entry !== 'object') throw new Error(`유효하지 않은 배치: ${id}`);
     const p = entry as Placement;
-    if (!originals.has(id) && (!/^copy-[a-z]+-\d+-\d+$/.test(id) || !p.sourceId || !originals.has(p.sourceId) || originals.get(p.sourceId)!.fixed)) throw new Error(`알 수 없는 가구 ID: ${id}`);
+    if (!originals.has(id) && (!/^copy-[a-zA-Z]+-\d+-\d+$/.test(id) || !p.sourceId || !originals.has(p.sourceId) || originals.get(p.sourceId)!.fixed)) throw new Error(`알 수 없는 가구 ID: ${id}`);
   }
   const placed: Item[] = [];
   function append(item: Item, id: string) {
@@ -24,6 +24,6 @@ export function applyLayout(items: Item[], value: unknown): Item[] {
   }
   for (const item of items) append(item, item.id);
   for (const [id, entry] of Object.entries(entries)) if (!originals.has(id)) append(originals.get((entry as Placement).sourceId!)!, id);
-  if (placed.length > 200) throw new Error('가구는 최대 200개까지 배치할 수 있습니다.');
+  if (placed.filter(item => !item.fixed).length > 200) throw new Error('가구는 최대 200개까지 배치할 수 있습니다.');
   return placed;
 }

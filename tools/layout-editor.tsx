@@ -15,6 +15,9 @@ import { Room } from '../src/scene/Room';
 import { Lighting } from '../src/scene/Lighting';
 import { GRAPHICS } from '../src/scene/graphics';
 import { changePlacement, duplicateItems, removeItems, toLayout } from './layout-operations';
+import { applyLayout } from '../src/data/layout';
+import savedLayout from '../src/data/layout.json';
+import { clearLocalLayout, readLocalLayout, writeLocalLayout } from '../src/data/localLayout';
 import './layout-editor.css';
 
 function EditorCamera({ view }: { view: number }) {
@@ -62,8 +65,15 @@ function Editor() {
   const [items, setItems] = useState<Item[]>([]), [selected, setSelected] = useState(''), [mode, setMode] = useState<'translate' | 'rotate'>('translate');
   const [past, setPast] = useState<Item[][]>([]), [view, setView] = useState(0), [dirty, setDirty] = useState(false), [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('가구를 클릭하거나 목록에서 선택하세요.'), [error, setError] = useState('');
-  const copied = useRef('');
-  useEffect(() => { fetch('/__layout').then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setItems(data.items); }).catch(error => setError(String(error))); }, []);
+  const copied = useRef(''), [serverless, setServerless] = useState(false);
+  // 제작용 서버(npm run editor)가 있으면 프로젝트 파일에 저장, 없으면(/edit 공개 페이지) 이 브라우저에 저장한다.
+  useEffect(() => {
+    const offline = () => { setServerless(true); setItems(applyLayout(DEFAULT_ITEMS, readLocalLayout() ?? savedLayout)); };
+    fetch('/__layout', { cache: 'no-store' }).then(async response => {
+      if (!response.headers.get('content-type')?.includes('json')) { offline(); return; }
+      const data = await response.json(); if (!response.ok) throw new Error(data.error); setItems(data.items);
+    }).catch(offline);
+  }, []);
   const current = items.find(item => item.id === selected);
   function replace(next: Item[]) { setPast(previous => [...previous.slice(-19), items]); setItems(next); setDirty(true); setError(''); }
   function edit(patch: Partial<Placement>) {
@@ -88,10 +98,20 @@ function Editor() {
     }
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, [items, selected, past, saving]);
+  function exportLayout() {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(toLayout(items), null, 2) + '\n'], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'layout.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function saveLocal() {
+    if (!writeLocalLayout(toLayout(items))) throw new Error('이 브라우저에 저장할 수 없습니다.');
+    setDirty(false); setMessage('이 브라우저의 게임에 반영했습니다! 모두에게 반영하려면 layout.json을 내보내 주세요.');
+  }
   async function save() {
     setSaving(true); setError(''); setMessage('게임에 배치를 반영하는 중입니다…');
     try {
+      if (serverless) { saveLocal(); return; }
       const response = await fetch('/__layout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toLayout(items)) });
+      if (!response.headers.get('content-type')?.includes('json')) { setServerless(true); saveLocal(); return; }
       const data = await response.json(); if (!response.ok) throw new Error(data.error);
       setDirty(false); setMessage('반영 완료! 새로 게임을 열면 수정한 배치를 사용합니다.');
     } catch (error) { setError(error instanceof Error ? error.message : '저장에 실패했습니다.'); setMessage('편집 내용은 이 화면에 유지되어 있습니다.'); }
@@ -99,7 +119,7 @@ function Editor() {
   }
   return <main className="editor-shell" style={{ pointerEvents: saving ? 'none' : undefined }}>
     <aside className="editor-panel">
-      <header><h1>HNUBS <span>배치 편집기</span></h1><p>제작자 전용 · 이 컴퓨터에서만 사용</p></header>
+      <header><h1>HNUBS <span>배치 편집기</span></h1><p>{serverless ? '이 브라우저에 저장 · layout.json 내보내기' : '제작자 전용 · 이 컴퓨터의 프로젝트에 저장'}</p></header>
       <p className="intro">가구 선택 → 화살표로 이동 → 게임에 반영<br/>책상 위 기기와 소품도 함께 움직입니다.</p>
       <label className="field-label">선택한 가구<select aria-label="편집할 가구" value={selected} onChange={event => setSelected(event.target.value)}><option value="">가구를 선택하세요</option>{items.filter(item => !item.fixed).map(item => <option key={item.id} value={item.id}>{item.snackCounter ? '간식대' : specs[item.kind].label} · {item.id}</option>)}</select></label>
       <div className="editor-modes"><button aria-pressed={mode === 'translate'} onClick={() => setMode('translate')}>이동</button><button aria-pressed={mode === 'rotate'} onClick={() => setMode('rotate')}>회전</button><button onClick={() => setView(v => v + 1)}>{view % 2 ? '위에서 보기' : '입체 보기'}</button></div>
@@ -114,7 +134,9 @@ function Editor() {
       <div className="history-buttons"><button disabled={!past.length || saving} onClick={undo}>되돌리기</button><button disabled={saving} onClick={() => replace(DEFAULT_ITEMS)}>처음 배치</button></div>
       <div className="editor-status"><p role="status">{message}</p>{error && <p role="alert" className="editor-error">{error}</p>}<span>{dirty ? '아직 게임에 반영하지 않은 변경이 있습니다.' : '저장된 배치'}</span></div>
       <button className="save-layout" disabled={saving || !items.length} onClick={save}>{saving ? '저장 · 게임 빌드 중…' : '게임에 반영'}</button>
-      <a href="http://localhost:4173/" target="_blank" rel="noopener noreferrer">수정한 게임 열기</a>
+      <button className="export-layout" disabled={!items.length} onClick={exportLayout}>layout.json 내보내기</button>
+      {serverless && readLocalLayout() !== null && <button className="export-layout" onClick={() => { clearLocalLayout(); setItems(applyLayout(DEFAULT_ITEMS, savedLayout)); setMessage('이 브라우저 저장을 지우고 기본 배치로 돌렸습니다.'); }}>브라우저 저장 지우기</button>}
+      <a href={serverless ? '../' : 'http://localhost:4173/'} target="_blank" rel="noopener noreferrer">수정한 게임 열기</a>
       <p className="editor-note">Ctrl+C / V 복사·붙여넣기 · Delete 삭제<br/>Ctrl+Z 되돌리기 · 휠 확대<br/>반영 전 배치는 자동으로 백업됩니다.</p>
     </aside>
     <div className="editor-stage">

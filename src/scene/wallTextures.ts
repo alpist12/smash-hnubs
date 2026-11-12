@@ -5,6 +5,19 @@ const RULES = ['방송 20분 전 와서 준비하기', '자신의 행동에 책�
 const cache = new Map<string, CanvasTexture>();
 function canvas(w: number, h: number) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')!] as const; }
 function draw(key: string) {
+  if (key.startsWith('acoustic:')) {
+    // 부스 흡음벽: 파란 회색 패브릭 + 흰 줄눈(가로 0.75m, 세로 0.6m). key = acoustic:폭:높이:바닥높이
+    const [w, h, bottom] = key.split(':').slice(1).map(Number), px = 128;
+    const [c, ctx] = canvas(Math.max(8, Math.round(w * px)), Math.max(8, Math.round(h * px)));
+    ctx.fillStyle = '#8697aa'; ctx.fillRect(0, 0, c.width, c.height);
+    let seed = Math.round(w * 1000 + h * 7); const r = () => { seed = seed * 16807 % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < c.width * c.height / 30; i++) { ctx.fillStyle = r() > .5 ? 'rgba(60,72,90,.22)' : 'rgba(200,212,224,.18)'; ctx.fillRect(r() * c.width, r() * c.height, 2, 1); }
+    ctx.fillStyle = '#e7ecef';
+    for (let x = 0; x <= w + .001; x += .75) ctx.fillRect(Math.round(x * px) - 2, 0, 4, c.height);
+    const top = bottom + h;
+    for (let y = Math.ceil(bottom / .6) * .6; y <= top + .001; y += .6) ctx.fillRect(0, Math.round((top - y) * px) - 2, c.width, 4);
+    return c;
+  }
   if (key === 'rules') {
     const [c, ctx] = canvas(512, 360); ctx.fillStyle = '#f4f4f0'; ctx.fillRect(0, 0, 512, 360);
     ctx.fillStyle = '#2c3540'; ctx.font = '30px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('HNUBS 규칙', 256, 42); ctx.textAlign = 'left';
