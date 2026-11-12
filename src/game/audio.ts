@@ -113,7 +113,13 @@ export function playCrumble(finish: Finish, pieces: number) {
   noise(c, t, dur, 'lowpass', 900, 70, .7 * k, .01);
   tone(c, t, dur * .6, 'sine', 62, 30, .45 * k, .01);
   crackle(c, t, dur, Math.min(50, 10 + pieces), finish === 'glass' ? 4200 : 1600, .28 * k);
-  if (finish === 'glass' || finish === 'screen') noise(c, t, .5, 'highpass', 5500, 2500, .5 * k, .001);
+  if (finish === 'glass' || finish === 'screen') {
+    // 쨍그랑: 날카로운 파열음 + 유리 조각들이 떨어지며 내는 맑은 울림
+    noise(c, t, .6, 'highpass', 6500, 2600, .8, .001);
+    noise(c, t, .08, 'bandpass', 3800, 2400, .7, .001, 1.5);
+    for (let i = 0; i < 14; i++) tone(c, t + Math.random() * .7, .1 + Math.random() * .35, 'sine', vary(3800, .5), vary(3000, .4), .07 + Math.random() * .06, .001);
+    crackle(c, t + .05, .9, 30, 5200, .3);
+  }
 }
 
 /** 바닥에 떨어진 물건(카메라·마이크 등)이 부딪히는 소리. */

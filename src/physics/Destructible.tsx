@@ -86,7 +86,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         if (need > 0 && pieces.length > 1) {
           const pick = pieces.map((piece, i) => ({ i, d: new Vector3(...piece.pos).distanceToSquared(local) })).filter(({ i }) => !removedRef.current.includes(i)).sort((x, y) => x.d - y.d).slice(0, need).map(({ i }) => i);
           useGame.getState().addDebris(shards(pick.map(i => pieces[i])).map((piece, k) => pieceDebris(piece, q, origin, scale, location, Math.min(maxSpeed + .8, 3), now + k)));
-          if (sound()) playCrack(pieces[pick[0]]?.finish ?? mainFinish, .3 + pick.length * .12 + amount / 80);
+          if (sound()) { const glass = pick.some(i => pieces[i].finish === 'glass'); playCrack(glass ? 'glass' : pieces[pick[0]]?.finish ?? mainFinish, .3 + pick.length * .12 + amount / 80); }
           removedRef.current = [...removedRef.current, ...pick];
           // 받쳐 주는 조각이 없어져 공중에 뜬 조각은 그대로 떨어진다(물리 법칙).
           const floating = unsupported(pieces, removedRef.current, !!item.fixed && (item.bottom ?? 0) > .5);
@@ -122,7 +122,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
       const origin = rb.translation(), rot = rb.rotation(), q = new Quaternion(rot.x, rot.y, rot.z, rot.w);
       const major = shards(pieces.filter((_, i) => !removedRef.current.includes(i)), .3);
       spill(1);
-      if (sound()) playCrumble(mainFinish, major.length);
+      if (sound()) playCrumble(item.kind === 'windowWall' || item.kind === 'glassPane' || major.some(p => p.finish === 'glass') ? 'glass' : mainFinish, major.length);
       const size = Math.max(...parts.map(p => Math.max(...p.size))) * (item.scale ?? 1);
       aim.shake = Math.max(aim.shake, Math.min(.12, .02 + size * .03));
       // 물리 없이 튀는 작은 조각(칩)으로 '와장창' 느낌을 더한다.
