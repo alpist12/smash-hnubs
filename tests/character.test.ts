@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { COMBO_GAP, HitCombo, VOICE_STAGES } from '../src/game/hitCombo';
 
 test('character voice advances in order without cutting speech and resets after a combo gap', () => {
+  assert.equal(VOICE_STAGES.length, 8);
+  assert.deepEqual(VOICE_STAGES[7], [13.95, 15.32]);
   const combo = new HitCombo();
   let now = 1000;
   assert.equal(combo.hit(now), 0);
@@ -21,7 +23,7 @@ test('character voice advances in order without cutting speech and resets after 
   assert.equal(combo.stage, -1);
   assert.equal(combo.hit(now + COMBO_GAP + 1), 0);
   combo.reset(); assert.equal(combo.hit(now + COMBO_GAP + 2), 0);
-  for (const [start, end] of VOICE_STAGES) assert.ok(start >= 0 && start < end && end <= 19.114375);
+  for (const [start, end] of VOICE_STAGES) assert.ok(start >= 0 && start < end && end <= 15.32);
 });
 import { headGeometry, facePatch, faceZ, furGeometry, hairGeometry, torsoGeometry, trousersGeometry, sleeveGeometry } from '../src/scene/characterGeometry';
 

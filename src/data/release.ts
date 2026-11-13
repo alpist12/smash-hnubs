@@ -1,10 +1,8 @@
 export const RELEASE = {
-  id: '2026.11.13-2',
-  date: '2026.11.13',
+  id: '2026.11.14-1',
+  date: '2026.11.14',
   changes: [
-    { title: '캐릭터 입체 모델 재작업', detail: '얼굴 윤곽과 눈매, 긴 머리와 회색 털모자를 입체로 다시 만들었어요.' },
-    { title: '연타 음성 9단계', detail: '연속 타격하면 다음 대사로 진행하고, 2초 쉬면 첫 단계로 돌아가요.' },
-    { title: '업데이트 알림 추가', detail: '새 버전의 변경 내용을 접속할 때 확인할 수 있어요.' },
+    { title: '연타 음성을 8단계로 정리', detail: '마지막 감사합니다 구간을 제외했어요. 8단계까지 진행하며, 2초 쉬면 첫 단계로 돌아가요.' },
   ],
 } as const;
 export const RELEASE_SEEN_KEY = 'hnubs-smash:release-seen:v1';
