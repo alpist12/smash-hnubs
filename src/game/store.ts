@@ -11,7 +11,7 @@ interface State {
   meteor: MeteorStrike | null;
   weapon: WeaponId; score: number; best: number; destroyed: Record<string, true>; round: number;
   effects: Effect[]; debris: Debris[]; sound: boolean; quality: Quality; graphicsMode: GraphicsMode; walls: boolean; ceiling: boolean;
-  cameraRequest: number; cameraMode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character'; hovered: string; hint: string; ready: boolean;
+  cameraRequest: number; cameraMode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character' | 'yujin'; hovered: string; hint: string; ready: boolean;
   setQuality: (quality: Quality) => void; selectGraphics: (mode: GraphicsMode) => void;
   select: (weapon: WeaponId) => void; destroy: (id: string, points: number) => boolean;
   reset: () => void; addEffect: (effect: Effect) => void; addDebris: (parts: Debris[]) => void;
