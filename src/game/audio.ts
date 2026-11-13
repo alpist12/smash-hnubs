@@ -6,7 +6,7 @@ import type { Finish } from '../data/types';
  */
 let ctx: AudioContext | undefined, master: GainNode | undefined, noiseBuffer: AudioBuffer | undefined;
 let recent: number[] = [];
-function audio() {
+export function audioContext(resume = true) {
   try {
     if (!ctx) {
       ctx = new AudioContext();
@@ -16,7 +16,7 @@ function audio() {
       noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const data = noiseBuffer.getChannelData(0); for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     }
-    if (ctx.state === 'suspended') void ctx.resume();
+    if (resume && ctx.state === 'suspended') void ctx.resume();
     return ctx;
   } catch { return undefined; }
 }
@@ -47,7 +47,7 @@ function crackle(c: AudioContext, t: number, dur: number, count: number, freq: n
   for (let i = 0; i < count; i++) noise(c, t + Math.random() * dur, .012 + Math.random() * .03, 'bandpass', vary(freq, .4), vary(freq * .6, .3), peak * (.4 + Math.random() * .6), .001, 2.5);
 }
 
-const on = () => { const c = audio(); return c && master && budget() ? c : undefined; };
+const on = () => { const c = audioContext(); return c && master && budget() ? c : undefined; };
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {

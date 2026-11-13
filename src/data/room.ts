@@ -8,6 +8,7 @@ import { readLocalLayout } from './localLayout';
 // shortcut: 실측이 없는 사진 기반 추정치. 실측 후 이 값과 아래 배치만 조정한다.
 export const ROOM = { width: 14, depth: 9, height: 2.8, wainscot: 1.02 };
 export const specs: Record<Kind, Spec> = {
+  mirror: { label: '벽 거울', mass: 5, threshold: 45, score: 35, collision: 999 },
   mediaCabinet: { label: '유리문 CD 수납장', mass: 55, threshold: 160, score: 90, collision: 42 },
   carton: { label: '장비 보관 상자', mass: 1.5, threshold: 25, score: 10, collision: 10 },
   mixer: { label: '오디오 믹싱 콘솔', mass: 12, threshold: 85, score: 65, collision: 28 },
@@ -131,7 +132,7 @@ add('partition', [partitionDesk.pos[0] + .39, 0, partitionDesk.pos[2]], { width:
 const W = BOOTH_WALL_Z, P = .12; // P: 기술부스 이중바닥 높이
 const TOP = P + .8; // 방송 작업대 상판 높이
 // 기술부스: 관찰창 앞 주황 콘솔 + 왼쪽 JD-MEDIA 랙 + 오른쪽 상자 책상, 메인룸 쪽 벽에는 CD 유리장.
-const console_ = add('desk', [2.4, P, W + .6], { width: 4.2, depth: 1.05, broadcastDesk: true, color: '#c1652d' });
+const console_ = add('desk', [2.4, P, W + .6], { width: 4.2, depth: 1.15, broadcastDesk: true, color: '#c1652d' });
 add('mixer', [3.55, TOP, W + .62], { parentId: console_.id, scale: .55 });
 add('monitor', [1.05, TOP, W + .35], { parentId: console_.id, scale: .78 });
 add('monitor', [2.2, TOP, W + .35], { parentId: console_.id, scale: .7 });
@@ -140,12 +141,12 @@ add('mouse', [1.5, TOP, W + .85], { parentId: console_.id });
 add('microphone', [2.85, TOP, W + .5], { parentId: console_.id, rotation: Math.PI, scale: .8 });
 add('book', [.55, TOP, W + .75], { parentId: console_.id, color: '#cf4a44' });
 for (const x of [BOOTH_WINDOW.x - BOOTH_WINDOW.width / 2 - .05, BOOTH_WINDOW.x + BOOTH_WINDOW.width / 2 + .05]) add('speaker', [x, 2.18, W + .22]);
-add('rack', [-1.55, P, W + .5], { height: 2.3, width: .85, depth: .78 });
+add('rack', [-1.55, P, W + .5], { height: 2.3, width: 1.05, depth: .88 });
 add('equipmentStack', [-.55, P, W + .42]);
 add('monitor', [-.55, P + .95, W + .4], { scale: .72 });
 add('keyboard', [-.62, P + .8, W + .95], { color: '#d3d3cc' });
 add('chair', [2.0, P, W + 1.65], { color: '#4e7e9b', rotation: Math.PI });
-const sideDesk = add('desk', [5.6, P, W + .6], { width: 2.4, depth: 1.05, broadcastDesk: true, color: '#c1652d' });
+const sideDesk = add('desk', [5.6, P, W + .6], { width: 2.4, depth: 1.15, broadcastDesk: true, color: '#c1652d' });
 add('carton', [5.25, TOP, W + .5], { parentId: sideDesk.id, width: .62, height: .42 });
 add('carton', [5.25, TOP + .42, W + .5], { parentId: sideDesk.id, width: .55, height: .3 });
 add('carton', [6.2, TOP, W + .45], { parentId: sideDesk.id, width: .55, height: .55 });
@@ -158,7 +159,7 @@ add('carton', [-6.55, 0, -7.6], { width: .55, height: .4 });
 for (const x of [-1.5, 1.5, 4.5]) for (const z of [-6, -8.6]) add('light', [x, 2.72, z], { fixed: true });
 // 아나부스: 관찰창 앞 곡선 데스크, 왼쪽 원형 테이블+스피커, 창 오른쪽 철제 캐비닛·좌식 소파,
 // 맞은편 벽에 PA 스피커 더미, 쿠션 선반, 소화기, LED 조명, 대리석 테이블.
-const anchor = add('anchorDesk', [BOOTH_WINDOW.x, 0, W - .75], { width: 2.5, rotation: Math.PI });
+const anchor = add('anchorDesk', [BOOTH_WINDOW.x, 0, W - .75], { width: 3.2, depth: .8, rotation: Math.PI });
 add('monitor', [BOOTH_WINDOW.x + .55, .79, W - .58], { parentId: anchor.id, rotation: Math.PI, scale: .62 });
 add('monitor', [BOOTH_WINDOW.x - .55, .79, W - .58], { parentId: anchor.id, rotation: Math.PI, scale: .62 });
 add('keyboard', [BOOTH_WINDOW.x + .45, .79, W - .9], { parentId: anchor.id, rotation: Math.PI });
@@ -168,8 +169,8 @@ add('micStand', [BOOTH_WINDOW.x + .95, 0, W - 1.55], { rotation: Math.PI * .85 }
 add('sledChair', [BOOTH_WINDOW.x + .2, 0, W - 1.75]);
 add('sideTable', [BOOTH_WINDOW.x + 2.15, 0, W - .5]);
 add('paSpeaker', [BOOTH_WINDOW.x + 2.15, .52, W - .5], { width: .46, height: .62, depth: .42, rotation: Math.PI * .92 });
-add('metalCabinet', [-.85, 0, W - .4], { rotation: Math.PI });
-add('floorSofa', [-2.75, 0, W - .6], { width: 1.55, rotation: Math.PI });
+add('metalCabinet', [-.85, 0, W - .4], { width: .9, height: 1.6, rotation: Math.PI });
+add('floorSofa', [-2.75, 0, W - .6], { width: 1.95, rotation: Math.PI });
 add('ottoman', [-3.3, 0, W - 2.2]);
 add('floorCushion', [-6.55, 0, W - 1.7]);
 const far = STUDIO_END;
@@ -180,7 +181,7 @@ add('carton', [-5.7, 1.0, far + .4], { width: .5, height: .2 });
 add('extinguisher', [-5.15, 0, far + .3]);
 add('metalShelf', [-4.55, 0, far + .3]);
 add('stand', [.9, 0, far + .55], { rotation: Math.PI });
-const marble = add('table', [2.2, 0, far + 1.3], { width: 1.5, depth: .75, color: '#e6e4de' });
+const marble = add('table', [2.2, 0, far + 1.3], { width: 2.2, depth: .95, color: '#e6e4de' });
 add('book', [2.7, .8, far + 1.25], { parentId: marble.id, color: '#f1efe8' });
 add('sledChair', [1.6, 0, far + .7], { color: '#9d9890' });
 add('foldingChair', [3.6, 0, far + 1.1], { rotation: -Math.PI / 2 });
@@ -188,6 +189,15 @@ add('foldingChair', [-1.5, 0, far + 1.2]);
 add('ampRack', [5.9, 0, far + .35]);
 add('carton', [4.7, 0, far + .3], { width: .55, height: .45 });
 for (const x of [-3.5, .5, 4.5]) for (const z of [W - 1.6, far + 1.8]) add('light', [x, 2.72, z], { fixed: true });
+// 부스 장비의 기본 모델 크기. 저장된 위치·회전·사용자 배율은 그대로 적용한다.
+for (const item of items) {
+  if (item.pos[2] >= STUDIO_START || item.fixed) continue;
+  if (item.kind === 'monitor') item.width = 1.2;
+  if (item.kind === 'mixer') item.width = 1.35;
+  if (item.kind === 'chair') item.width = .58;
+  if (item.kind === 'sledChair') item.width = .63;
+  if (item.kind === 'foldingChair') item.width = .52;
+}
 // 냉장고 옆 정수기 (사용자 요청). 기존 가구 ID를 지키려고 마지막에 추가한다.
 add('waterPurifier', [-1.5, 0, ROOM.depth / 2 - .3], { rotation: Math.PI });
 // ── 부술 수 있는 벽·문·벽 부착물 (모두 고정 물체, 기존 가구 ID 보존을 위해 마지막에 추가) ──
@@ -254,6 +264,8 @@ boothRun(-ROOM.width / 2, ROOM.width / 2, x => ({ pos: [x, 0, STUDIO_END - .06],
 for (const sign of [-1, 1]) boothRun(STUDIO_END, STUDIO_START, z => ({ pos: [sign * ROOM.width / 2, 0, z], rotation: sign < 0 ? Math.PI / 2 : -Math.PI / 2, wall: sign < 0 ? 'studioLeft' : 'studioRight', acoustic: 'front' }));
 // 예전 뒷벽 흡음판 3장은 새 벽 패널과 겹치므로 목록에서 뺀다(다른 가구 ID는 그대로 유지된다).
 for (let i = items.length - 1; i >= 0; i--) if (items[i].kind === 'panel') items.splice(i, 1);
+// 문과 수납장 사이 왼쪽 벽: 기존 오브젝트 ID 뒤에 추가한다.
+mount('mirror', 'left', -1.15, 1.5, .17, { width: .85, height: 1.4 });
 // 너무 쉽게 깨지지 않도록 모든 가구의 내구도를 2배로 (금·가루가 충분히 쌓인 뒤 깨진다).
 for (const spec of Object.values(specs)) spec.threshold *= 2;
 export const DEFAULT_ITEMS = items;

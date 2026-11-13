@@ -12,12 +12,12 @@ export function Lighting({ quality = 'high' }: { quality?: Quality }) {
     const light = sun.current; if (!light) return;
     light.target.position.set(0, 0, WORLD.centerZ); scene.add(light.target);
     return () => { scene.remove(light.target); };
-  }, [scene]);
+  }, [scene, quality]);
   return <>
     <ambientLight intensity={high ? .55 : 1.1} color="#e7ebec" />
     <hemisphereLight args={['#fff3df', '#71838c', high ? 1.05 : 1.5]} />
     {/* 그림자 범위를 건물 크기에 맞춰 좁혀 해상도를 올리고(깜빡임 감소), 빛의 중심을 건물 가운데로 둔다. */}
-    <directionalLight position={[-4, 15, WORLD.centerZ + 3]} intensity={2.6} color="#fff1dc" castShadow={high} shadow-mapSize={[shadow, shadow]} shadow-camera-left={-13} shadow-camera-right={13} shadow-camera-top={13} shadow-camera-bottom={-13} shadow-camera-near={1} shadow-camera-far={40} shadow-normalBias={.03} shadow-bias={-.0004} ref={sun} />
+    <directionalLight key={quality} position={[-4, 15, WORLD.centerZ + 3]} intensity={2.6} color="#fff1dc" castShadow={quality !== 'low'} shadow-mapSize={[shadow, shadow]} shadow-camera-left={-13} shadow-camera-right={13} shadow-camera-top={13} shadow-camera-bottom={-13} shadow-camera-near={1} shadow-camera-far={40} shadow-normalBias={.03} shadow-bias={-.0004} ref={sun} />
     <directionalLight position={[7, 5, -6]} intensity={.65} color="#d9e8f5" />
     {high && <Suspense fallback={null}>
       <SoftShadows size={8} samples={16} focus={.5} />

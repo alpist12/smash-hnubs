@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { GRAPHICS } from './graphics';
+import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { AdditiveBlending, Group, Mesh, MeshBasicMaterial, PointLight, Quaternion, Vector3 } from 'three';
 import type { Effect, V3 } from '../data/types';
@@ -48,11 +49,11 @@ function Rocket({ effect }: { effect: Effect }) {
 /** 부서질 때 튀는 작은 조각(시각 효과 전용): 포물선 + 회전 + 바닥에서 멈춤. */
 function Shatter({ effect }: { effect: Effect }) {
   const group = useRef<Group>(null);
-  const count = useGame.getState().quality === 'high' ? 34 : 16;
-  const chips = useRef(Array.from({ length: count }, (_, i) => {
+  const count = GRAPHICS[useGame.getState().quality].chips;
+  const chips = useMemo(() => Array.from({ length: count }, (_, i) => {
     const a = i * 2.39996 + effect.id, speed = (1.6 + (i * 53 % 17) / 6) * (.6 + effect.radius * .5);
     return { v: new Vector3(Math.cos(a) * speed, 2.2 + (i * 31 % 13) / 4, Math.sin(a) * speed), spin: new Vector3((i % 5) - 2, (i % 3) - 1, (i % 4) - 1.5).multiplyScalar(6), size: .025 + (i * 17 % 9) / 220 * Math.min(1.4, effect.radius + .4), color: effect.colors![i % effect.colors!.length] };
-  })).current;
+  }), [count, effect]);
   useFrame(() => {
     const t = (performance.now() - effect.born) / 1000;
     if (!group.current) return;
@@ -69,11 +70,11 @@ function Shatter({ effect }: { effect: Effect }) {
 }
 /** 타격 가루: 부품 색의 작은 입자가 퍼졌다가 천천히 가라앉으며 사라진다. */
 function Dust({ effect }: { effect: Effect }) {
-  const group = useRef<Group>(null), count = useGame.getState().quality === 'high' ? 16 : 8;
-  const motes = useRef(Array.from({ length: count }, (_, i) => {
+  const group = useRef<Group>(null), count = GRAPHICS[useGame.getState().quality].dust;
+  const motes = useMemo(() => Array.from({ length: count }, (_, i) => {
     const a = i * 2.39996 + effect.id * .7, sp = (.35 + (i * 37 % 11) / 14) * effect.radius;
     return { v: new Vector3(Math.cos(a) * sp, .25 + (i * 13 % 7) / 9, Math.sin(a) * sp), size: .012 + (i * 29 % 9) / 400, color: i % 3 === 0 ? '#d9d4c8' : effect.colors![i % effect.colors!.length] };
-  })).current;
+  }), [count, effect]);
   useFrame(() => {
     const t = (performance.now() - effect.born) / 1000;
     if (!group.current) return;
@@ -217,7 +218,7 @@ export function Effects() {
     }
     if (performance.now() - lastCleanup.current > 1000) {
       lastCleanup.current = performance.now(); const state = useGame.getState(), now = performance.now();
-      const debris = state.debris.filter(d => now - d.born < (state.quality === 'low' ? 7000 : 11000));
+      const debris = state.debris.filter(d => now - d.born < GRAPHICS[state.quality].lifetime);
       const keep = state.effects.filter(e => now - e.born < (e.type === 'shatter' ? 1700 : 1200));
       if (debris.length !== state.debris.length || keep.length !== state.effects.length) useGame.setState({ debris, effects: keep });
     }

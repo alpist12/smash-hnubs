@@ -5,7 +5,7 @@ import { MOUSE, TOUCH, Vector3, PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { useGame } from '../game/store';
 import { cameraInput } from './cameraInput';
-import { aim } from '../physics/attacks';
+import { targets, aim } from '../physics/attacks';
 import { STUDIOS, WORLD } from '../data/studios';
 import { ROOM } from '../data/room';
 
@@ -50,6 +50,10 @@ export function CameraRig() {
     const studio = STUDIOS.find(studio => studio.id === mode);
     if (studio) goal.current.set(5.5 * distance, 5.5 * distance, studio.centerZ + 5.5 * distance);
     controls.current.target.set(0, .3, studio ? studio.centerZ : mode === 'top' ? WORLD.centerZ + 2 : 0); controls.current.update();
+    if (mode === 'character') {
+      const p = targets.get('character-wonjae')?.point() ?? new Vector3(-3.6, 1.1, 2.5);
+      controls.current.target.copy(p); goal.current.copy(p).add(new Vector3(.9, .65, portrait ? 4.5 : 3.7));
+    }
   }, [camera, request, mode, size.width, size.height]);
   useFrame((_, delta) => {
     if (!controls.current) return;

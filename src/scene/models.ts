@@ -5,8 +5,28 @@ const cylinder = (name: string, pos: V3, size: V3, finish: Finish = 'metal', col
 
 // Named local-space parts can be replaced by meshes from a Blender GLB without changing physics or scoring.
 export function model(item: Item): Part[] {
+  const parts = modelParts(item);
+  const widths: Partial<Record<Item['kind'], number>> = { monitor: .95, mixer: 1.05, chair: .48, sledChair: .52, foldingChair: .43 };
+  const baseWidth = widths[item.kind];
+  if (!baseWidth || !item.width) return parts;
+  const factor = item.width / baseWidth;
+  return parts.map(part => ({ ...part,
+    pos: part.pos.map(n => n * factor) as V3,
+    size: part.size.map(n => n * factor) as V3,
+    round: part.round === undefined ? undefined : part.round * factor,
+  }));
+}
+
+function modelParts(item: Item): Part[] {
   const w = item.width ?? 1.55;
   switch (item.kind) {
+    case 'mirror': {
+      const width = item.width ?? .85, height = item.height ?? 1.4;
+      const parts = [box('거울 유리', [0, 0, .012], [width - .065, height - .065, .018], 'glass', '#d6e0e0', .002), box('거울 뒷판', [0, 0, -.008], [width, height, .025], 'black', '#535c60', .008)];
+      for (const x of [-width / 2 + .018, width / 2 - .018]) parts.push(box('거울 세로 테두리', [x, 0, .018], [.036, height, .045], 'metal', '#b8bdb9', .006));
+      for (const y of [-height / 2 + .018, height / 2 - .018]) parts.push(box('거울 가로 테두리', [0, y, .018], [width, .036, .045], 'metal', '#b8bdb9', .006));
+      return parts;
+    }
     case 'desk': case 'table': {
       const low = item.kind === 'table' && item.color === '#342c29';
       const h = low ? .43 : .76, d = item.depth ?? (item.kind === 'desk' ? .72 : low ? .65 : 1);

@@ -1,13 +1,17 @@
+import { GRAPHICS } from '../scene/graphics';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { RigidBody, CuboidCollider, ConvexHullCollider, type RapierRigidBody } from '@react-three/rapier';
-import { Euler, Quaternion, Vector3 } from 'three';
+import { Euler, InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Item, Part, V3, Debris, Finish } from '../data/types';
 import { ITEMS, specs } from '../data/room';
-import { fractureParts, splitPiece, prismPoints } from './fracture';
+import { fractureParts, fractureWallParts, expandWallSelection, splitPiece, prismPoints } from './fracture';
 import { contents, PROPS } from '../data/contents';
 import { playCrack, playCrumble, playThud } from '../game/audio';
 import { model } from '../scene/models';
+import { ModelParts } from '../scene/ModelParts';
+import { initialColliders } from './colliderParts';
+import { MirrorSurface } from '../scene/MirrorSurface';
 import { PartMesh } from '../scene/PartMesh';
 import { useGame } from '../game/store';
 import { useFrame } from '@react-three/fiber';
@@ -23,8 +27,9 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
   const [stage, setStage] = useState(0), stageRef = useRef(0);
   const [removed, setRemoved] = useState<number[]>([]), removedRef = useRef<number[]>([]);
   const parts = useMemo(() => model(item), [item]);
-  // 미리 조각으로 나눠 둔 모양(맞을 때부터 이 조각들로 그린다).
-  const pieces = useMemo(() => fractureParts(parts, useGame.getState().quality === 'high' ? 56 : 30, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7))), [parts, item.id]);
+  // 파편은 첫 충격 때 계산하고 재사용한다. 파괴 중에는 품질이 바뀌어도 조각 번호를 유지한다.
+  const piecesRef = useRef<Part[] | null>(null);
+  const solidColliders = useMemo(() => initialColliders(item, parts), [item, parts]);
   // 조각 색: 유리·화면을 뺀 가장 큰 부품들의 색.
   const chipColors = useMemo(() => {
     const colors = [...new Set(parts.filter(p => p.finish !== 'glass' && p.finish !== 'screen').sort((a, b) => b.size[0] * b.size[1] * b.size[2] - a.size[0] * a.size[1] * a.size[2]).slice(0, 4).map(p => p.color ?? '#9a9a90'))];
@@ -73,6 +78,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
       if (fromContact) amount = Math.min(amount, Math.max(0, spec.threshold * .9 - damage.current));
       if (amount < .1) return;
       if (item.kind === 'light' && !useGame.getState().ceiling) return;
+      const pieces = piecesRef.current ??= (item.kind === 'wallSegment' ? fractureWallParts.bind(null, item) : fractureParts)(parts, GRAPHICS[useGame.getState().quality].fragments, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7)));
       damage.current += amount;
       const nextStage = Math.min(3, Math.ceil(damage.current / spec.threshold * 3));
       const now = performance.now();
@@ -84,7 +90,8 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         let need = Math.min(cap, Math.floor(ratio * cap)) - removedRef.current.length;
         if (need <= 0 && amount >= 15 && removedRef.current.length < cap) need = 1;
         if (need > 0 && pieces.length > 1) {
-          const pick = pieces.map((piece, i) => ({ i, d: new Vector3(...piece.pos).distanceToSquared(local) })).filter(({ i }) => !removedRef.current.includes(i)).sort((x, y) => x.d - y.d).slice(0, need).map(({ i }) => i);
+          const nearest = pieces.map((piece, i) => ({ i, d: new Vector3(...piece.pos).distanceToSquared(local) })).filter(({ i }) => !removedRef.current.includes(i)).sort((x, y) => x.d - y.d).slice(0, need).map(({ i }) => i);
+          const pick = item.kind === 'wallSegment' ? expandWallSelection(pieces, nearest, removedRef.current) : nearest;
           useGame.getState().addDebris(shards(pick.map(i => pieces[i])).map((piece, k) => pieceDebris(piece, q, origin, scale, location, Math.min(maxSpeed + .8, 3), now + k)));
           if (sound()) { const glass = pick.some(i => pieces[i].finish === 'glass'); playCrack(glass ? 'glass' : pieces[pick[0]]?.finish ?? mainFinish, .3 + pick.length * .12 + amount / 80); }
           removedRef.current = [...removedRef.current, ...pick];
@@ -151,12 +158,17 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     if (!shown.current) return;
     e.stopPropagation(); aim.point = e.point.toArray() as V3; aim.target = item.id;
     // 조준 원이 맞은 면(벽이면 세로면)에 붙도록 면의 방향을 기억한다.
-    if (e.face) aim.normal = e.face.normal.clone().transformDirection(e.object.matrixWorld).toArray() as V3;
+    if (e.face) {
+      const normal = e.face.normal.clone();
+      if (e.instanceId !== undefined && e.object instanceof InstancedMesh) { const matrix = new Matrix4(); e.object.getMatrixAt(e.instanceId, matrix); normal.transformDirection(matrix); }
+      aim.normal = normal.transformDirection(e.object.matrixWorld).toArray() as V3;
+    }
     useGame.setState({ hovered: `${spec.label}${stage > 0 ? ` · 손상 ${Math.min(99, Math.round(damage.current / spec.threshold * 100))}%` : ''}` });
   }
+  const pieces = piecesRef.current ?? [];
   if (stage === 4) return null;
   // 조각이 떨어지기 시작하면 충돌 모양도 남은 조각으로 바꿔, 받침이 사라진 물건은 실제로 기울거나 넘어진다.
-  const colliderParts = removed.length ? pieces.filter((piece, i) => !removed.includes(i) && piece.collider !== false) : parts.filter(p => p.collider !== false);
+  const colliderParts = removed.length ? pieces.filter((piece, i) => !removed.includes(i) && piece.collider !== false) : solidColliders;
   return <RigidBody ref={body} name={item.id} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1} type={item.fixed ? 'fixed' : 'dynamic'} colliders={false} canSleep linearDamping={.5} angularDamping={.7} friction={.65} restitution={.12}
     onContactForce={event => {
       const now = performance.now();
@@ -171,8 +183,9 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     <group ref={view} visible={item.kind !== 'light' || ceiling} name={`model:${item.id}`} onPointerMove={onAim} onPointerOver={onAim} onPointerOut={() => { if (aim.target === item.id) { aim.target = ''; useGame.setState({ hovered: '' }); } }}
       onPointerDown={e => { if (!shown.current) return; onAim(e); if (useGame.getState().weapon === 'laser' && e.button === 0) { aim.holding = true; attack(aim.point, item.id); } }}
       onClick={e => { if (!shown.current) return; e.stopPropagation(); if (e.delta <= 5 && e.button === 0 && useGame.getState().weapon !== 'laser') attack(e.point.toArray() as V3, item.id); }}>
-      {!spilled && inside.map((c, i) => <group key={`c${i}`} position={c.pos} rotation={[0, c.rotation ?? 0, 0]}>{c.model.map((part, k) => <PartMesh key={k} part={part} />)}</group>)}
-      {removed.length ? pieces.map((piece, index) => removed.includes(index) ? null : <PartMesh key={`p${index}`} part={piece} damaged={stage >= 2} />) : parts.map((part, index) => <PartMesh key={index} part={part} damaged={stage >= 2} />)}
+      {item.kind === 'mirror' && stage === 0 && <MirrorSurface item={item} />}
+      {!spilled && inside.map((c, i) => <group key={`c${i}`} position={c.pos} rotation={[0, c.rotation ?? 0, 0]}><ModelParts parts={c.model} /></group>)}
+      {removed.length ? pieces.map((piece, index) => removed.includes(index) ? null : <PartMesh key={`p${index}`} part={piece} damaged={stage >= 2} />) : <ModelParts parts={parts} damaged={stage >= 2} />}
     </group>
   </RigidBody>;
 });
@@ -189,10 +202,13 @@ function bounds(part: Part) {
  * 남은 조각 중 바닥(고정 벽은 바닥 또는 천장)과 이어지지 않은 조각 번호를 돌려준다.
  * 서로 닿거나 겹친 조각끼리 이어진 것으로 본다. 벽도 바닥에서만 받친다(문 위 상인방만 천장에 매달림).
  */
+const pieceBounds = new WeakMap<Part[], ReturnType<typeof bounds>[]>();
 function unsupported(pieces: Part[], removed: number[], fixed: boolean) {
   const alive = pieces.map((_, i) => i).filter(i => !removed.includes(i));
   if (alive.length < 2) return [];
-  const box = pieces.map(bounds), all = pieces.map(bounds);
+  let box = pieceBounds.get(pieces);
+  if (!box) { box = pieces.map(bounds); pieceBounds.set(pieces, box); }
+  const all = box;
   const floor = Math.min(...all.map(b => b.min.y)), top = Math.max(...all.map(b => b.max.y)), gap = .015;
   const touches = (a: number, b: number) => ['x', 'y', 'z'].every(k => box[a].min[k as 'x'] <= box[b].max[k as 'x'] + gap && box[b].min[k as 'x'] <= box[a].max[k as 'x'] + gap);
   const held = new Set(alive.filter(i => box[i].min.y <= floor + .03 || (fixed && box[i].max.y >= top - .03)));
@@ -211,7 +227,7 @@ function pieceDebris(part: Part, q: Quaternion, origin: Vector3, scale: number, 
 /** 크기(와 다각형 단면)를 배율만큼 키운다. */
 function scalePart(part: Part, scale: number): Part {
   if (scale === 1) return part;
-  return { ...part, pos: part.pos.map(n => n * scale) as V3, size: part.size.map(n => n * scale) as V3, poly: part.poly?.map(([u, v]) => [u * scale, v * scale] as [number, number]) };
+  return { ...part, pos: part.pos.map(n => n * scale) as V3, size: part.size.map(n => n * scale) as V3, uvOffset: part.uvOffset?.map(n => n * scale) as V3 | undefined, uvSize: part.uvSize?.map(n => n * scale) as V3 | undefined, poly: part.poly?.map(([u, v]) => [u * scale, v * scale] as [number, number]) };
 }
 function modelBounds(model: Part[]) {
   const min = new Vector3(Infinity, Infinity, Infinity), max = new Vector3(-Infinity, -Infinity, -Infinity);
@@ -250,6 +266,6 @@ export function Fragment({ fragment }: { fragment: Debris }) {
     onCollisionEnter={fragment.model ? () => { if (thuds.current++ < 2 && useGame.getState().sound) playThud(Math.min(1, fragment.mass)); } : undefined}>
     {points ? <ConvexHullCollider args={[points]} mass={fragment.mass} collisionGroups={DEBRIS_GROUPS} />
       : <CuboidCollider args={fragment.part.size.map(v => Math.max(.015, v / 2)) as V3} position={fragment.model ? fragment.part.pos : undefined} mass={fragment.mass} collisionGroups={DEBRIS_GROUPS} />}
-    {fragment.model ? fragment.model.map((part, i) => <PartMesh key={i} part={part} />) : <PartMesh part={fragment.part} damaged />}
+    {fragment.model ? <ModelParts parts={fragment.model} /> : <PartMesh part={fragment.part} damaged />}
   </RigidBody>;
 }

@@ -1,5 +1,5 @@
-import { Euler, Vector3 } from 'three';
-import type { Part, V3 } from '../data/types';
+import { Euler, Quaternion, Vector3 } from 'three';
+import type { Item, Part, V3 } from '../data/types';
 
 /**
  * 조각 파편 (SMASH HANBAT 방식).
@@ -75,9 +75,10 @@ export function splitPiece(source: Part, random: Random = Math.random, min = .1)
     for (const [y0, y1] of spans) {
       const size = [0, 0, 0] as V3; size[a] = sa; size[b] = sb; size[axis] = y1 - y0;
       const offset = new Vector3(); offset.setComponent(a, cx); offset.setComponent(b, cy); offset.setComponent(axis, (y0 + y1) / 2);
+      const uvOffset = offset.clone().add(new Vector3(...(part.uvOffset ?? [0, 0, 0]))).toArray() as V3;
       if (rotation) offset.applyEuler(rotation);
       offset.add(new Vector3(...part.pos));
-      out.push({ ...part, name: part.name.endsWith('파편') ? part.name : `${part.name} 파편`, size, pos: offset.toArray() as V3, poly: local, axis, round: 0 });
+      out.push({ ...part, name: part.name.endsWith('파편') ? part.name : `${part.name} 파편`, size, pos: offset.toArray() as V3, poly: local, axis, round: 0, uvOffset, uvSize: part.uvSize ?? [...part.size] as V3 });
     }
   }
   return out;
@@ -99,6 +100,44 @@ export function fractureParts(parts: Part[], limit = 24, seed = 7): Part[] {
     pieces.splice(index, 1, ...kids);
   }
   return [...pieces, ...tiny];
+}
+
+/** 벽의 표면·속벽·뒷면이 같은 작은 구획으로 갈라지도록 함께 자른다. */
+export function fractureWallParts(item: Item, parts: Part[], limit = 24, seed = 7): Part[] {
+  const body = parts[0], w = body.size[0], h = body.size[1], bottom = body.pos[1] - h / 2;
+  const random = seeded(seed), target = Math.max(8, Math.floor(limit / 2));
+  const columns = Math.max(1, Math.ceil(Math.sqrt(target * w / h))), rows = Math.max(1, Math.ceil(target / columns));
+  const dx = w / columns, dy = h / rows;
+  const points = Array.from({ length: rows + 1 }, (_, y) => Array.from({ length: columns + 1 }, (_, x): P2 => [
+    -w / 2 + x * dx + (x > 0 && x < columns ? (random() - .5) * dx * .18 : 0),
+    bottom + y * dy + (y > 0 && y < rows ? (random() - .5) * dy * .18 : 0),
+  ]));
+  const out: Part[] = [];
+  for (const source of parts) {
+    if (source.name.includes('문틀')) { out.push(source); continue; }
+    const q = new Quaternion().setFromEuler(new Euler(...(source.rotation ?? [0, 0, 0]))), inverse = q.clone().invert();
+    for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
+      let polygon = [points[row][col], points[row][col + 1], points[row + 1][col + 1], points[row + 1][col]].map(([x, y]): P2 => {
+        const p = new Vector3(x - source.pos[0], y - source.pos[1], 0).applyQuaternion(inverse); return [p.x, p.y];
+      });
+      if (area2(polygon) < 0) polygon.reverse();
+      polygon = clip(clip(clip(clip(polygon, 1, 0, source.size[0] / 2), -1, 0, source.size[0] / 2), 0, 1, source.size[1] / 2), 0, -1, source.size[1] / 2);
+      if (polygon.length < 3 || Math.abs(area2(polygon)) < 1e-7) continue;
+      const [cx, cy] = centroid(polygon), local = polygon.map(([x, y]): P2 => [x - cx, y - cy]);
+      const pos = new Vector3(cx, cy, 0).applyQuaternion(q).add(new Vector3(...source.pos));
+      out.push({ ...source, name: `${source.name} 파편`, pos: pos.toArray() as V3,
+        size: [Math.max(...local.map(p => p[0])) - Math.min(...local.map(p => p[0])), Math.max(...local.map(p => p[1])) - Math.min(...local.map(p => p[1])), source.size[2]],
+        shape: 'box', axis: 2, poly: local, round: 0, uvOffset: [cx, cy, 0], uvSize: [...source.size], fractureGroup: `${item.id}:${col}:${row}` });
+    }
+  }
+  return out;
+}
+
+/** 같은 벽 구획의 앞뒤를 함께 제거한다. */
+export function expandWallSelection(pieces: Part[], selected: number[], removed: number[]): number[] {
+  const groups = new Set(selected.map(i => pieces[i].fractureGroup).filter((group): group is string => !!group));
+  const ids = new Set(selected), gone = new Set(removed);
+  return pieces.flatMap((part, i) => !gone.has(i) && (ids.has(i) || !!part.fractureGroup && groups.has(part.fractureGroup)) ? [i] : []);
 }
 
 /** 기둥 조각의 꼭짓점 (부품 로컬 좌표, 회전 전). 볼록 충돌체에 쓴다. */

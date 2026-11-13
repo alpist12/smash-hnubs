@@ -90,9 +90,13 @@ test('weapons use distinct radii, decreasing explosion force and bounded debris'
   assert.ok(WEAPONS.missile.radius > WEAPONS.bat.radius && WEAPONS.missile.radius < WEAPONS.bomb.radius);
   assert.deepEqual(Object.values(WEAPONS).map(w => w.key), ['1', '2', '3', '4', '5']);
   useGame.getState().reset();
+  useGame.getState().selectGraphics('high');
   for (let i = 0; i < 150; i++) useGame.getState().addEffect({ id: i, born: 0, type: 'bat', radius: 1, point: [0, 0, 0] });
   assert.equal(useGame.getState().effects.length, 24);
   const fragment = { id: 0, born: 0, pos: [0, 0, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], impulse: [0, 0, 0] as [number, number, number], mass: 1, part: model(ITEMS[0])[0] };
   useGame.getState().addDebris(Array.from({ length: 420 }, (_, id) => ({ ...fragment, id })));
   assert.equal(useGame.getState().debris.length, 340);
+  useGame.getState().selectGraphics('low');
+  assert.equal(useGame.getState().debris.length, 80);
+  assert.equal(useGame.getState().effects.length, 8);
 });

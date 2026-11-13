@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { WEAPONS, type WeaponId } from '../weapons/config';
 import { useGame } from '../game/store';
-import { playImpact } from '../game/audio';
+import { audioContext, playImpact } from '../game/audio';
 import type { V3 } from '../data/types';
 
 export interface Target { point: () => Vector3; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean) => void }
@@ -31,6 +31,7 @@ export function attack(point: V3, selected = '') {
   const state = useGame.getState(), now = performance.now() / 1000;
   if (!state.ready || now - aim.last < WEAPONS[state.weapon].cooldown) return;
   aim.last = now;
+  if (state.sound) audioContext(); // 지연 폭발도 모바일 사용자 제스처 안에서 오디오를 연다.
   if (state.weapon === 'bomb') {
     bombs.push({ at: now + .8, point: [...point], round: state.round });
     state.addEffect({ id: nextEffectId(), type: 'fuse', point, born: performance.now(), radius: .12 });

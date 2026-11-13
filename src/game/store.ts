@@ -1,3 +1,4 @@
+import { GRAPHICS, GRAPHICS_KEY, deviceQuality, loadGraphicsMode, type Quality, type GraphicsMode } from '../scene/graphics';
 import { create } from 'zustand';
 import type { WeaponId } from '../weapons/config';
 import type { Debris, Effect } from '../data/types';
@@ -7,15 +8,21 @@ export function loadBest(): number {
 }
 interface State {
   weapon: WeaponId; score: number; best: number; destroyed: Record<string, true>; round: number;
-  effects: Effect[]; debris: Debris[]; sound: boolean; quality: 'low' | 'high'; walls: boolean; ceiling: boolean;
-  cameraRequest: number; cameraMode: 'home' | 'top' | 'photo' | 'technical' | 'announcer'; hovered: string; hint: string; ready: boolean;
+  effects: Effect[]; debris: Debris[]; sound: boolean; quality: Quality; graphicsMode: GraphicsMode; walls: boolean; ceiling: boolean;
+  cameraRequest: number; cameraMode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character'; hovered: string; hint: string; ready: boolean;
+  setQuality: (quality: Quality) => void; selectGraphics: (mode: GraphicsMode) => void;
   select: (weapon: WeaponId) => void; destroy: (id: string, points: number) => boolean;
   reset: () => void; addEffect: (effect: Effect) => void; addDebris: (parts: Debris[]) => void;
 }
+const graphicsMode = loadGraphicsMode();
 export const useGame = create<State>((set, get) => ({
   weapon: 'bat', score: 0, best: loadBest(), destroyed: {}, round: 0, effects: [], debris: [], sound: true,
-  // 휴대폰·태블릿(터치 위주 기기)은 가벼운 그래픽으로 시작한다.
-  quality: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 'low' : 'high',
+  graphicsMode, quality: graphicsMode === 'auto' ? deviceQuality() : graphicsMode,
+  setQuality: quality => set(s => ({ quality, debris: s.debris.slice(-GRAPHICS[quality].debris), effects: s.effects.slice(-GRAPHICS[quality].effects) })),
+  selectGraphics: mode => {
+    try { localStorage.setItem(GRAPHICS_KEY, mode); } catch { /* 현재 세션에는 적용한다. */ }
+    set({ graphicsMode: mode }); get().setQuality(mode === 'auto' ? deviceQuality() : mode);
+  },
   walls: true, ceiling: false, cameraRequest: 0, cameraMode: 'home', hovered: '', hint: '', ready: false,
   select: (weapon) => set({ weapon }),
   destroy: (id, points) => {
@@ -26,6 +33,6 @@ export const useGame = create<State>((set, get) => ({
     set({ score, best, destroyed: { ...get().destroyed, [id]: true } }); return true;
   },
   reset: () => set(s => ({ score: 0, destroyed: {}, debris: [], effects: [], round: s.round + 1, hovered: '', hint: '방송국을 원래 모습으로 복구했습니다.' })),
-  addEffect: effect => set(s => ({ effects: [...s.effects.slice(-23), effect] })),
-  addDebris: parts => set(s => ({ debris: [...s.debris, ...parts].slice(-(s.quality === 'high' ? 340 : 140)) })),
+  addEffect: effect => set(s => ({ effects: [...s.effects.slice(-(GRAPHICS[s.quality].effects - 1)), effect] })),
+  addDebris: parts => set(s => ({ debris: [...s.debris, ...parts].slice(-(GRAPHICS[s.quality].debris)) })),
 }));

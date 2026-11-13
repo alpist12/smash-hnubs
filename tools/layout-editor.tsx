@@ -9,10 +9,13 @@ import type { Item, V3 } from '../src/data/types';
 import type { Placement } from '../src/data/layout';
 import { DEFAULT_ITEMS, WORLD, specs } from '../src/data/room';
 import { model } from '../src/scene/models';
-import { PartMesh } from '../src/scene/PartMesh';
+import { MirrorSurface } from '../src/scene/MirrorSurface';
+import { ModelParts } from '../src/scene/ModelParts';
 import { Studios } from '../src/scene/Studios';
 import { Room } from '../src/scene/Room';
 import { Lighting } from '../src/scene/Lighting';
+import { useGame } from '../src/game/store';
+import { Performance } from '../src/scene/Performance';
 import { GRAPHICS } from '../src/scene/graphics';
 import { changePlacement, duplicateItems, removeItems, toLayout } from './layout-operations';
 import { applyLayout } from '../src/data/layout';
@@ -52,16 +55,19 @@ function Objects({ items, selected, mode, select, commit, report }: { items: Ite
   return <>
     {/* 벽·문·벽 부착물(고정 물체)은 보이기만 하고 편집하지 않는다. 천장 조명은 위에서 보는 시야를 가려 뺀다. */}
     {items.filter(item => item.fixed && item.kind !== 'light').map(item => <group key={item.id} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1}>
-      {model(item).map((part, i) => <PartMesh key={i} part={part} />)}
+      {item.kind === 'mirror' && <MirrorSurface item={item} />}
+      <ModelParts parts={model(item)} />
     </group>)}
     {items.filter(item => !item.fixed).map(item => <group key={item.id} ref={object => { if (object) refs.current.set(item.id, object); else refs.current.delete(item.id); }} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1}
       onClick={event => { event.stopPropagation(); if (!dragging.current && event.delta < 5) select(item.id); }}>
-      {model(item).map((part, i) => <PartMesh key={i} part={part} />)}
+      {item.kind === 'mirror' && <MirrorSurface item={item} />}
+      <ModelParts parts={model(item)} />
     </group>)}
     {selected && refs.current.get(selected) && <TransformControls object={refs.current.get(selected)!} mode={mode} showX={mode === 'translate'} showY={mode === 'rotate'} showZ={mode === 'translate'} size={.9} translationSnap={.05} rotationSnap={Math.PI / 12} onMouseDown={() => { dragging.current = true; }} onObjectChange={preview} onMouseUp={finish} />}
   </>;
 }
 function Editor() {
+  const quality = useGame(s => s.quality);
   const [items, setItems] = useState<Item[]>([]), [selected, setSelected] = useState(''), [mode, setMode] = useState<'translate' | 'rotate'>('translate');
   const [past, setPast] = useState<Item[][]>([]), [view, setView] = useState(0), [dirty, setDirty] = useState(false), [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('가구를 클릭하거나 목록에서 선택하세요.'), [error, setError] = useState('');
@@ -140,8 +146,8 @@ function Editor() {
       <p className="editor-note">Ctrl+C / V 복사·붙여넣기 · Delete 삭제<br/>Ctrl+Z 되돌리기 · 휠 확대<br/>반영 전 배치는 자동으로 백업됩니다.</p>
     </aside>
     <div className="editor-stage">
-      {items.length > 0 && <Canvas shadows dpr={GRAPHICS.high.dpr} camera={{ position: [0, 21, .01], fov: 40, near: .1, far: 150 }} gl={{ antialias: true, powerPreference: 'high-performance' }} onContextMenu={event => event.preventDefault()}>
-        <color attach="background" args={['#dfe2e4']} /><Lighting />
+      {items.length > 0 && <Canvas shadows={quality !== 'low'} dpr={GRAPHICS[quality].dpr} camera={{ position: [0, 21, .01], fov: 40, near: .1, far: 150 }} gl={{ antialias: true, powerPreference: 'high-performance' }} onContextMenu={event => event.preventDefault()}>
+        <color attach="background" args={['#dfe2e4']} /><Lighting quality={quality} /><Performance />
         <Suspense fallback={null}><Physics paused colliders={false}><Room /><Studios /></Physics><Objects items={items} selected={selected} mode={mode} select={setSelected} commit={edit} report={setError}/></Suspense>
         <EditorCamera view={view}/>
       </Canvas>}
