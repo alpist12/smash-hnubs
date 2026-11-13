@@ -25,25 +25,6 @@ test('character voice advances in order without cutting speech and resets after 
   combo.reset(); assert.equal(combo.hit(now + COMBO_GAP + 2), 0);
   for (const [start, end] of VOICE_STAGES) assert.ok(start >= 0 && start < end && end <= 11.63);
 });
-import { headGeometry, facePatch, faceZ, furGeometry, hairGeometry, torsoGeometry, trousersGeometry, sleeveGeometry } from '../src/scene/characterGeometry';
-
-test('sculpted character has a projected nose, curved face features and bounded finite 3D meshes', () => {
-  assert.ok(faceZ(0,.18) > faceZ(.07,.18)+.035);
-  const patch=facePatch([[-.06,.12],[0,.10],[.06,.12],[0,.09]]);
-  const z=Array.from({length:patch.getAttribute('position').count},(_,i)=>patch.getAttribute('position').getZ(i));
-  assert.ok(Math.max(...z)-Math.min(...z)>.005);
-  const meshes=[headGeometry(),patch,furGeometry(),hairGeometry(),hairGeometry(true),torsoGeometry(),trousersGeometry(1),sleeveGeometry(-1)];
-  for(const geometry of meshes) {
-    for(const value of geometry.getAttribute('position').array) assert.ok(Number.isFinite(value));
-    for(const value of geometry.getAttribute('normal').array) assert.ok(Number.isFinite(value));
-    geometry.computeBoundingBox();
-    assert.ok(geometry.boundingBox!.max.y<=2.2);
-    assert.ok(geometry.boundingBox!.min.y>=0);
-    assert.ok(geometry.index && geometry.index.count>0);
-    geometry.dispose();
-  }
-});
-
 
 import { CharacterHealth, CHARACTER_BAT_HITS } from '../src/game/characterHealth';
 import bat from '../src/weapons/bat';

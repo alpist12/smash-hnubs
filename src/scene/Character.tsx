@@ -2,19 +2,22 @@ import { useEffect, useRef, useState } from 'react';
 import { Html } from '@react-three/drei';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, useBeforePhysicsStep, type RapierRigidBody } from '@react-three/rapier';
-import { Group, Vector3 } from 'three';
+import { Group, Quaternion, Vector3 } from 'three';
 import { useGame } from '../game/store';
 import { HitCombo, VOICE_STAGES } from '../game/hitCombo';
 import { CharacterHealth, CHARACTER_BAT_HITS } from '../game/characterHealth';
 import { playCharacterVoice, prepareCharacterVoice, stopCharacterVoice } from '../game/characterVoice';
 import { aim, attack, targets } from '../physics/attacks';
 import type { V3 } from '../data/types';
-import { CharacterModel } from './CharacterModel';
+import { CharacterView } from './CharacterView';
 import { CHARACTER_MASS, CHARACTER_EXIT_DELAY, CHARACTER_RECOVER_DELAY, kickCharacter, steadyCharacter } from '../physics/characterMotion';
 
 import { CharacterWander } from '../physics/characterWander';
 
 import type { CharacterProfile } from '../data/characters';
+
+const UPRIGHT = new Quaternion(), standing = new Quaternion();
+const STAND_UP_RATE = 3.2; // 클수록 빨리 일어난다(약 1초에 거의 다 섬)
 
 export function Character({ profile }: { profile: CharacterProfile }) {
   const ID = profile.id;
@@ -84,11 +87,18 @@ export function Character({ profile }: { profile: CharacterProfile }) {
     const upright = 1 - 2 * (q.x * q.x + q.z * q.z) > .997;
     const canWalk = recovering && now - flinch.current > 1600 && upright;
     if (canWalk && !walkingLocked.current) {
-      rb.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      // 남은 회전 속도를 지우지 않으면 회전을 잠근 뒤에도 그 속도로 계속 기울어 걷다가 다시 눕는다.
+      rb.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true); rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
       rb.setEnabledRotations(false, false, false, true); walkingLocked.current = true;
     }
     wander.current.step(world, rb, world.timestep, now, canWalk);
-    if (recovering && !walkingLocked.current && !rb.isSleeping()) steadyCharacter(rb, world.timestep, now - flinch.current > 300);
+    if (recovering && !walkingLocked.current) {
+      if (1 - 2 * (q.x * q.x + q.z * q.z) < .997 && now - flinch.current > 300) {
+        // 맞고 0.3초 흔들린 뒤에는 스프링 대신 발을 축으로 몸을 직접 일으켜 세운다(가구에 기대거나 마찰이 커도 반드시 일어남).
+        standing.set(q.x, q.y, q.z, q.w).slerp(UPRIGHT, 1 - Math.exp(-world.timestep * STAND_UP_RATE));
+        rb.setRotation(standing, true); rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      } else if (!rb.isSleeping()) steadyCharacter(rb, world.timestep, now - flinch.current > 300);
+    }
   });
   useFrame(() => {
     if (health.current.gone) return;
@@ -109,7 +119,7 @@ export function Character({ profile }: { profile: CharacterProfile }) {
       onPointerOut={() => { if (aim.target === ID) { aim.target = ''; useGame.setState({ hovered: '' }); } }}
       onPointerDown={e => { onAim(e); if (!health.current.gone && e.button === 0 && useGame.getState().weapon === 'laser') { aim.holding = true; attack(aim.point, ID); } }}
       onClick={e => { e.stopPropagation(); if (!health.current.gone && e.button === 0 && e.delta <= 5 && useGame.getState().weapon !== 'laser') attack(e.point.toArray() as V3, ID); }}>
-      {!gone && <CharacterModel motion={wander} appearance={profile.appearance} />}
+      {!gone && <CharacterView profile={profile} motion={wander} />}
       {!gone && fallen && <Html center position={[0, 1.1, 0]} style={{ pointerEvents: 'none', whiteSpace: 'nowrap', background: '#1b2029ed', color: '#fff', borderRadius: 8, padding: '7px 12px', fontSize: 14 }}>누적 {CHARACTER_BAT_HITS}대 · 쓰러짐</Html>}
       {!gone && !fallen && stage >= 0 && <Html center position={[0, 2.18, 0]} style={{ pointerEvents: 'none', whiteSpace: 'nowrap', background: '#1b2029ed', color: '#fff', borderRadius: 8, padding: '7px 12px', fontSize: 14 }}>{profile.voice ? `연타 ${stage + 1} / ${VOICE_STAGES.length}` : profile.name}<small style={{ display: 'block', marginTop: 4, color: '#c0c6ce' }}>누적 {hits} / {CHARACTER_BAT_HITS}대 · 배트 기준</small></Html>}
     </group>

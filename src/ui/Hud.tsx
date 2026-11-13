@@ -30,7 +30,7 @@ export function Hud() {
   const hint = useGame(s => s.hint), [help, setHelp] = useState(false), [restoring, setRestoring] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
   const count = Object.keys(destroyed).length, percent = Math.round(count / TOTAL * 100);
-  function camera(mode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character' | 'yujin') { useGame.setState(s => ({ cameraMode: mode, cameraRequest: s.cameraRequest + 1 })); }
+  function camera(mode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character') { useGame.setState(s => ({ cameraMode: mode, cameraRequest: s.cameraRequest + 1 })); }
   function restore() { setRestoring(true); requestAnimationFrame(() => requestAnimationFrame(() => { useGame.getState().reset(); setTimeout(() => setRestoring(false), 250); })); }
   useEffect(() => {
     function key(e: KeyboardEvent) {
@@ -69,7 +69,7 @@ export function Hud() {
     <header className="topbar">
       <div className="brand-row">
         <div className="brand pill"><h1>HNUBS <span>SMASH</span></h1></div>
-        <label className="room-navigation pill"><Icon name="home" size={15}/><span className="sr-only">공간 보기</span><select aria-label="공간 보기" value={cameraMode === 'photo' ? 'home' : cameraMode} onChange={e => camera(e.target.value as 'home' | 'top' | 'technical' | 'announcer' | 'character' | 'yujin')}><option value="home">메인룸</option><option value="technical">기술부스</option><option value="announcer">아나부스</option>{CHARACTERS.map(profile => <option key={profile.id} value={profile.camera}>{profile.name}</option>)}<option value="top">방송국 전체</option></select></label>
+        <label className="room-navigation pill"><Icon name="home" size={15}/><span className="sr-only">공간 보기</span><select aria-label="공간 보기" value={cameraMode === 'photo' ? 'home' : cameraMode} onChange={e => camera(e.target.value as 'home' | 'top' | 'technical' | 'announcer' | 'character')}><option value="home">메인룸</option><option value="technical">기술부스</option><option value="announcer">아나부스</option>{CHARACTERS.map(profile => <option key={profile.id} value={profile.camera}>{profile.name}</option>)}<option value="top">방송국 전체</option></select></label>
       </div>
       <label className="graphics-control pill"><span>화질</span><select aria-label="그래픽 품질" value={graphicsMode} onChange={e => useGame.getState().selectGraphics(e.target.value as GraphicsMode)}><option value="auto">자동 · {QUALITY_LABELS[quality]}</option><option value="low">저사양 · 속도 우선</option><option value="medium">균형</option><option value="high">고화질 · 화질 우선</option></select></label>
     </header>
