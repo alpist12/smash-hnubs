@@ -8,7 +8,7 @@ export function prepareCharacterVoice() {
   if (buffer) return buffer;
   const context = audioContext(false);
   if (!context) return undefined;
-  buffer = fetch(`${import.meta.env.BASE_URL}characters/wonjae.m4a`)
+  buffer = fetch(`${import.meta.env.BASE_URL}characters/wonjae-39c7be9a.m4a`)
     .then(response => { if (!response.ok) throw new Error('음원을 불러오지 못했습니다.'); return response.arrayBuffer(); })
     .then(data => context.decodeAudioData(data));
   // 로딩 실패가 게임을 막지 않으며 다음 타격에서 재시도한다.

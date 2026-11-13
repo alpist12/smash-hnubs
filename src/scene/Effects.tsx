@@ -1,4 +1,5 @@
 import { GRAPHICS } from './graphics';
+import { Meteor } from './Meteor';
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { AdditiveBlending, Group, Mesh, MeshBasicMaterial, PointLight, Quaternion, Vector3 } from 'three';
@@ -91,10 +92,10 @@ function Dust({ effect }: { effect: Effect }) {
 function Impact({ effect }: { effect: Effect }) {
   const camera = useThree(state => state.camera);
   const group = useRef<Group>(null), ring = useRef<Mesh>(null), cloud = useRef<Group>(null), flash = useRef<Mesh>(null), sparks = useRef<Group>(null), burst = useRef<Group>(null);
-  const color = effectColor(effect), big = effect.type === 'bomb' || effect.type === 'missile';
+  const color = effectColor(effect), big = effect.type === 'bomb' || effect.type === 'missile' || effect.type === 'meteor';
   useFrame(() => {
     const elapsed = (performance.now() - effect.born) / 1000;
-    const duration = effect.type === 'fuse' ? .8 : effect.type === 'laser' ? .35 : .8;
+    const duration = effect.type === 'meteor' ? 1.7 : effect.type === 'fuse' ? .8 : effect.type === 'laser' ? .35 : .8;
     if (!group.current) return;
     group.current.visible = elapsed < duration;
     if (sparks.current) sparks.current.children.forEach((spark, i) => {
@@ -213,13 +214,13 @@ export function Effects() {
     tickAttacks();
     if (cursor.current) {
       const normal = new Vector3(...aim.normal).normalize();
-      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = !!aim.target;
+      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = !!aim.target && !useGame.getState().meteor;
       cursor.current.quaternion.slerp(new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), normal), .35);
     }
     if (performance.now() - lastCleanup.current > 1000) {
       lastCleanup.current = performance.now(); const state = useGame.getState(), now = performance.now();
       const debris = state.debris.filter(d => now - d.born < GRAPHICS[state.quality].lifetime);
-      const keep = state.effects.filter(e => now - e.born < (e.type === 'shatter' ? 1700 : 1200));
+      const keep = state.effects.filter(e => now - e.born < (e.type === 'shatter' || e.type === 'meteor' ? 1900 : 1200));
       if (debris.length !== state.debris.length || keep.length !== state.effects.length) useGame.setState({ debris, effects: keep });
     }
   });
@@ -231,5 +232,6 @@ export function Effects() {
     </group>
     <BatSwing effects={effects} />
     <LaserBeam />
+    <Meteor />
   </>;
 }

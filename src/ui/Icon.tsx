@@ -3,6 +3,7 @@ export function Icon({ name, size = 22 }: { name: string; size?: number }) {
     bat: <><path d="m5 19 6-6m-7 5 2 2m4-8 6-8a2.1 2.1 0 0 1 3 3l-8 6Z"/><path d="m17 15 3 1m-6 1 1 3"/></>,
     bomb: <><circle cx="11" cy="14" r="7"/><path d="m15 8 2-3 3 1m0-4v2m-3-2 1 2m3 3h2"/></>,
     laser: <><path d="M11 12h11M4 12H1m6-5L4 4m4 13-3 3m6-15V1m0 22v-4m5-12 3-3"/><circle cx="11" cy="12" r="3"/></>,
+    meteor: <><path d="m5 3 8 8m-3-9 7 7M2 9l6 6"/><path d="m17 10 4 3 1 5-4 4-5-1-4-4 2-5Z"/><path d="m14 15 2-1 3 3-2 2-3-1Z"/></>,
     missile: <><path d="M14 4c3-2 6-2 6-2s0 3-2 6l-7 7-4-4Z"/><path d="m9 9-4 1-2 3 4 1m6-1-1 4-3 2-1-4M6 18l-3 3m5-1-2 2m-1-6-2 2"/><circle cx="15" cy="8" r="1.3"/></>,
     sonic: <><path d="M4 10v4m4-8v12m4-16v20m4-16v12m4-8v4"/></>,
     home: <><path d="m3 11 9-7 9 7v9H3Z"/><path d="M10 20v-5h4v5"/></>,

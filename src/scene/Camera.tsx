@@ -8,12 +8,14 @@ import { cameraInput } from './cameraInput';
 import { targets, aim } from '../physics/attacks';
 import { STUDIOS, WORLD } from '../data/studios';
 import { ROOM } from '../data/room';
+import { meteorPosition, meteorProgress } from '../data/meteor';
 
 export function CameraRig() {
   const controls = useRef<OrbitImpl>(null), { camera, size } = useThree();
   const request = useGame(s => s.cameraRequest), mode = useGame(s => s.cameraMode);
   const transition = useRef(1), start = useRef(new Vector3()), goal = useRef(new Vector3());
   const previousShake = useRef(new Vector3());
+  const cinematic = useRef<{ position: Vector3; target: Vector3 } | null>(null);
   const keys = useRef(new Set<string>());
   useEffect(() => {
     const typing = (e: KeyboardEvent) => e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement;
@@ -58,6 +60,30 @@ export function CameraRig() {
   useFrame((_, delta) => {
     if (!controls.current) return;
     camera.position.sub(previousShake.current); previousShake.current.set(0, 0, 0);
+    const strike = useGame.getState().meteor;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduced && (strike || cinematic.current)) {
+      const c = controls.current;
+      c.enabled = false;
+      if (strike && !cinematic.current) cinematic.current = { position: camera.position.clone(), target: c.target.clone() };
+      const saved = cinematic.current!;
+      let desired = saved.position, target = saved.target;
+      if (strike) {
+        const progress=meteorProgress(strike,performance.now());
+        const reveal=Math.max(0,Math.min(1,(progress-.48)/.4)), blend=reveal*reveal*(3-2*reveal);
+        const rock=new Vector3(...meteorPosition(strike.point,progress));
+        const wide=new Vector3(strike.point[0]+9,strike.point[1]+10,strike.point[2]+(size.width<size.height?24:13));
+        desired=rock.clone().add(new Vector3(2.1,1.1,size.width<size.height?5.6:4.6)).lerp(wide,blend);
+        target=rock.clone().lerp(new Vector3(strike.point[0],strike.point[1]+1.2,strike.point[2]),blend);
+      }
+      const k = 1-Math.exp(-delta*(strike?8:5));
+      camera.position.lerp(desired,k);c.target.lerp(target,k);c.update();
+      transition.current=1;
+      if (!strike && camera.position.distanceTo(saved.position)<.03) { camera.position.copy(saved.position);c.target.copy(saved.target);cinematic.current=null;c.enabled=true; }
+      if (aim.shake>.001) { const s=aim.shake;previousShake.current.set(Math.sin(performance.now()*.1)*s,Math.cos(performance.now()*.13)*s,0);camera.position.add(previousShake.current);aim.shake*=Math.exp(-delta*3.5); }
+      return;
+    }
+    controls.current.enabled = true;
     if (transition.current < 1) {
       transition.current = Math.min(1, transition.current + delta * 2.6);
       const t = transition.current;

@@ -1,0 +1,1 @@
+export default { id: 'meteor', label: '운석 낙하', short: '운석', key: '6', power: 900, impulse: 42, radius: 5.5, cooldown: 7.5, color: '#f2a15a', description: '지점 지정 → 운석 낙하 연출 → 넓은 범위 충돌', knockback: 9, lift: 1.2, flight: 4.4, aftermath: 2 } as const;

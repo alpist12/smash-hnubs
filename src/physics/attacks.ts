@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { WEAPONS, type WeaponId } from '../weapons/config';
 import { useGame } from '../game/store';
-import { audioContext, playImpact } from '../game/audio';
+import { audioContext, playImpact, stopMeteorFall } from '../game/audio';
 import type { V3 } from '../data/types';
 
 export interface Target { point: () => Vector3; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean) => void }
@@ -24,15 +24,19 @@ function detonate(weapon: WeaponId, point: V3, selected: string) {
     target.hit(config.power * strength, dir.multiplyScalar(config.impulse * strength).toArray() as V3, point, config.knockback * Math.max(.35, strength));
   }
   state.addEffect({ id: nextEffectId(), type: weapon, point, born: performance.now(), radius: config.radius });
-  aim.shake = weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
+  aim.shake = weapon === 'meteor' ? .55 : weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
   if (state.sound) playImpact(weapon);
 }
 export function attack(point: V3, selected = '') {
   const state = useGame.getState(), now = performance.now() / 1000;
   if (!state.ready || now - aim.last < WEAPONS[state.weapon].cooldown) return;
+  if (state.weapon === 'meteor' && state.meteor) return;
   aim.last = now;
   if (state.sound) audioContext(); // 지연 폭발도 모바일 사용자 제스처 안에서 오디오를 연다.
-  if (state.weapon === 'bomb') {
+  if (state.weapon === 'meteor') {
+    useGame.setState({ meteor: { id: nextEffectId(), point: [...point], born: now * 1000, impacted: false } });
+    if (state.sound) playImpact('meteor-fall');
+  } else if (state.weapon === 'bomb') {
     bombs.push({ at: now + .8, point: [...point], round: state.round });
     state.addEffect({ id: nextEffectId(), type: 'fuse', point, born: performance.now(), radius: .12 });
   } else if (state.weapon === 'missile') {
@@ -57,6 +61,13 @@ export function tickAttacks() {
     if (now < missile.at) return true;
     detonate('missile', missile.point, missile.target); return false;
   });
+  const strike = state.meteor;
+  if (strike && !strike.impacted && now * 1000 >= strike.born + WEAPONS.meteor.flight * 1000) {
+    useGame.setState({ meteor: { ...strike, impacted: true } });
+    stopMeteorFall();
+    detonate('meteor', strike.point, '');
+  }
+  if (strike && now * 1000 >= strike.born + (WEAPONS.meteor.flight + WEAPONS.meteor.aftermath) * 1000) useGame.setState({ meteor: null });
   if (aim.holding && state.weapon === 'laser') attack(aim.point, aim.target);
 }
-export function clearAttacks() { bombs = []; missiles = []; aim.holding = false; aim.last = -10; aim.shake = 0; }
+export function clearAttacks() { stopMeteorFall(); useGame.setState({ meteor: null }); bombs = []; missiles = []; aim.holding = false; aim.last = -10; aim.shake = 0; }

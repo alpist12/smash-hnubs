@@ -1,3 +1,4 @@
+import meteor from '../weapons/meteor';
 import type { Finish } from '../data/types';
 
 /**
@@ -6,6 +7,8 @@ import type { Finish } from '../data/types';
  */
 let ctx: AudioContext | undefined, master: GainNode | undefined, noiseBuffer: AudioBuffer | undefined;
 let recent: number[] = [];
+let meteorFallNodes: AudioScheduledSourceNode[] = [];
+export function stopMeteorFall() { for (const node of meteorFallNodes) { try { node.stop(); } catch { /* 이미 끝난 노드 */ } } meteorFallNodes = []; }
 export function audioContext(resume = true) {
   try {
     if (!ctx) {
@@ -35,12 +38,12 @@ function noise(c: AudioContext, t: number, dur: number, type: BiquadFilterType, 
   const filter = c.createBiquadFilter(); filter.type = type; filter.Q.value = q;
   filter.frequency.setValueAtTime(f0, t); filter.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
   src.connect(filter); filter.connect(env(c, t, peak, attack, dur));
-  src.start(t, Math.random() * 1.5); src.stop(t + dur + .05);
+  src.start(t, Math.random() * 1.5); src.stop(t + dur + .05); return src;
 }
 function tone(c: AudioContext, t: number, dur: number, type: OscillatorType, f0: number, f1: number, peak: number, attack = .004) {
   const o = c.createOscillator(); o.type = type;
   o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-  o.connect(env(c, t, peak, attack, dur)); o.start(t); o.stop(t + dur + .05);
+  o.connect(env(c, t, peak, attack, dur)); o.start(t); o.stop(t + dur + .05); return o;
 }
 /** 자글자글 부서지는 잔소리: 짧은 고역 노이즈 틱을 흩뿌린다. */
 function crackle(c: AudioContext, t: number, dur: number, count: number, freq: number, peak: number) {
@@ -51,13 +54,25 @@ const on = () => { const c = audioContext(); return c && master && budget() ? c 
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {
-  const c = on(); if (!c) return; const t = c.currentTime;
+  const c = type === 'meteor' ? audioContext() : on(); if (!c) return; const t = c.currentTime;
   switch (type) {
     case 'bat': // 딱! 나무 배트 타격 + 묵직한 쿵
       noise(c, t, .06, 'bandpass', vary(2400), 900, .9, .001, 1.4);
       tone(c, t, .16, 'triangle', vary(190), 70, .55);
       noise(c, t + .01, .25, 'lowpass', 900, 120, .35, .004);
       break;
+    case 'meteor':
+      tone(c, t, 2.4, 'sine', 85, 24, .9, .004);
+      tone(c, t, 1.8, 'triangle', 42, 20, .55, .008);
+      noise(c, t, 2.1, 'lowpass', 1900, 45, .85, .004).loop = true;
+      crackle(c, t + .08, 1.5, 45, 1500, .28);
+      break;
+    case 'meteor-fall': {
+      stopMeteorFall();
+      const wind = noise(c, t, meteor.flight, 'bandpass', 140, 2400, .35, meteor.flight*.75, .7); wind.loop = true;
+      meteorFallNodes = [wind, tone(c, t, meteor.flight, 'sine', 35, 210, .25, meteor.flight*.7), tone(c,t,meteor.flight,'sawtooth',55,165,.045,meteor.flight*.7), noise(c,t+meteor.flight-.7,.7,'highpass',800,3200,.17,.3)];
+      break;
+    }
     case 'bomb': case 'missile': // 콰광: 저역 폭발 + 길게 무너지는 잔향
       noise(c, t, 1.6, 'lowpass', 1400, 50, 1, .004);
       tone(c, t, .9, 'sine', 95, 28, 1, .003);
