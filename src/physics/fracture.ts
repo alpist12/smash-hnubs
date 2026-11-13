@@ -140,6 +140,12 @@ export function expandWallSelection(pieces: Part[], selected: number[], removed:
   return pieces.flatMap((part, i) => !gone.has(i) && (ids.has(i) || !!part.fractureGroup && groups.has(part.fractureGroup)) ? [i] : []);
 }
 
+// First weaken the wall; only then open holes. The last hit releases the whole section.
+export function wallFractureCount(damage: number, threshold: number, pieceCount: number) {
+  const progress = Math.max(0, Math.min(1, (damage / threshold - .4) / .6));
+  return Math.floor(Math.floor(pieceCount * .7) * progress);
+}
+
 /** 기둥 조각의 꼭짓점 (부품 로컬 좌표, 회전 전). 볼록 충돌체에 쓴다. */
 export function prismPoints(part: Part): number[] {
   if (!part.poly) { const [x, y, z] = part.size.map(n => n / 2); const out: number[] = []; for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) out.push(sx * x, sy * y, sz * z); return out; }

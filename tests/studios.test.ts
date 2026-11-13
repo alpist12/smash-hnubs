@@ -44,3 +44,33 @@ test('larger booth furniture preserves saved placements and scales its physical 
   const chair = placed.find(item => item.kind === 'sledChair')!;
   assert.equal(model(chair).find(part => part.name === '패브릭 좌판')!.size[0], .63);
 });
+
+
+test('shipped booth desks and main room partitions have separate physical footprints', async () => {
+  const { default: layout } = await import('../src/data/layout.json');
+  const { itemBounds } = await import('../tools/layout-operations');
+  const placed = applyLayout(DEFAULT_ITEMS, layout);
+  const desks = placed.filter(i => i.kind === 'desk' && i.pos[2] < STUDIO_START);
+  const cabinets = placed.filter(i => i.kind === 'mediaCabinet');
+  const partitions = placed.filter(i => i.kind === 'partition');
+  for (const group of [[...desks, ...cabinets], partitions]) {
+    for (let a = 0; a < group.length; a++) for (let b = a + 1; b < group.length; b++) {
+      assert.ok(!itemBounds(group[a]).intersectsBox(itemBounds(group[b])), `${group[a].id} overlaps ${group[b].id}`);
+    }
+  }
+});
+
+test('old overlapping saved positions migrate once while custom edits survive', async () => {
+  const { default: layout } = await import('../src/data/layout.json');
+  const old = structuredClone(layout);
+  old['copy-desk-88-2'].pos = [4.15, .12, -5.1];
+  old['copy-partition-72-1'].pos = [-2.8, 0, -2.55];
+  old['monitor-75'].pos[0] += .1;
+  const placed = applyLayout(DEFAULT_ITEMS, old);
+  for (const id of ['copy-desk-88-2', 'copy-partition-72-1', 'monitor-75']) {
+    assert.deepEqual(placed.find(i => i.id === id)!.pos, layout[id as keyof typeof layout].pos);
+  }
+  old['copy-desk-88-2'].pos = [2, .12, -7];
+  assert.deepEqual(applyLayout(DEFAULT_ITEMS, old).find(i => i.id === 'copy-desk-88-2')!.pos, [2, .12, -7]);
+  assert.deepEqual(applyLayout(DEFAULT_ITEMS, layout).find(i => i.id === 'copy-partition-72-1')!.pos, layout['copy-partition-72-1'].pos);
+});

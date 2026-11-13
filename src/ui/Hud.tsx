@@ -1,6 +1,7 @@
 import { QUALITY_LABELS, type GraphicsMode } from '../scene/graphics';
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../game/store';
+import { CHARACTERS } from '../data/characters';
 import { TOTAL } from '../data/room';
 import { WEAPONS, type WeaponId } from '../weapons/config';
 import { Splash } from './Splash';
@@ -29,7 +30,7 @@ export function Hud() {
   const hint = useGame(s => s.hint), [help, setHelp] = useState(false), [restoring, setRestoring] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
   const count = Object.keys(destroyed).length, percent = Math.round(count / TOTAL * 100);
-  function camera(mode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character') { useGame.setState(s => ({ cameraMode: mode, cameraRequest: s.cameraRequest + 1 })); }
+  function camera(mode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character' | 'yujin') { useGame.setState(s => ({ cameraMode: mode, cameraRequest: s.cameraRequest + 1 })); }
   function restore() { setRestoring(true); requestAnimationFrame(() => requestAnimationFrame(() => { useGame.getState().reset(); setTimeout(() => setRestoring(false), 250); })); }
   useEffect(() => {
     function key(e: KeyboardEvent) {
@@ -68,7 +69,7 @@ export function Hud() {
     <header className="topbar">
       <div className="brand-row">
         <div className="brand pill"><h1>HNUBS <span>SMASH</span></h1></div>
-        <label className="room-navigation pill"><Icon name="home" size={15}/><span className="sr-only">공간 보기</span><select aria-label="공간 보기" value={cameraMode === 'photo' ? 'home' : cameraMode} onChange={e => camera(e.target.value as 'home' | 'top' | 'technical' | 'announcer' | 'character')}><option value="home">메인룸</option><option value="technical">기술부스</option><option value="announcer">아나부스</option><option value="character">원재 선배</option><option value="top">방송국 전체</option></select></label>
+        <label className="room-navigation pill"><Icon name="home" size={15}/><span className="sr-only">공간 보기</span><select aria-label="공간 보기" value={cameraMode === 'photo' ? 'home' : cameraMode} onChange={e => camera(e.target.value as 'home' | 'top' | 'technical' | 'announcer' | 'character' | 'yujin')}><option value="home">메인룸</option><option value="technical">기술부스</option><option value="announcer">아나부스</option>{CHARACTERS.map(profile => <option key={profile.id} value={profile.camera}>{profile.name}</option>)}<option value="top">방송국 전체</option></select></label>
       </div>
       <label className="graphics-control pill"><span>화질</span><select aria-label="그래픽 품질" value={graphicsMode} onChange={e => useGame.getState().selectGraphics(e.target.value as GraphicsMode)}><option value="auto">자동 · {QUALITY_LABELS[quality]}</option><option value="low">저사양 · 속도 우선</option><option value="medium">균형</option><option value="high">고화질 · 화질 우선</option></select></label>
     </header>
@@ -92,7 +93,7 @@ export function Hud() {
           <button title="조작 도움말" aria-label="조작 도움말" onClick={() => setHelp(true)}><Icon name="help" size={20}/><span>조작법</span></button>
         </div>
       </div>
-      <p className="credits">HNUBS 방송국 실내 사진 기반 재구성 · 드래그 회전 · 휠 확대 · 우클릭/WASD 이동 · 바닥 더블클릭 이동</p>
+      <p className="credits">HNUBS 방송국 실내 사진 기반 재구성 · 드래그 회전 · 휠 확대 · WASD 시점 회전 · 우클릭 이동 · 바닥 더블클릭 이동</p>
     </footer>
     <MeteorCinematic />
     {hint && <div className="toast" role="status">{hint}</div>}
@@ -102,7 +103,7 @@ export function Hud() {
       <button autoFocus className="close" aria-label="도움말 닫기" onClick={() => setHelp(false)}><Icon name="close"/></button><h2 id="help-title">방송국 부수기</h2><p>물체를 클릭하거나 터치해 공격하세요.<br/>큰 가구는 여러 번 타격하면 부품으로 분리됩니다.</p>
       <p>원재 선배 캐릭터를 연속 타격하면 녹음이 순서대로 나옵니다. 대사가 끝난 뒤 다음 타격으로 진행하며, 2초 동안 쉬면 처음부터 시작합니다.</p>
       <p>화질의 자동 모드는 실제 프레임 속도를 보고 해상도·그림자·반사·파편을 조절합니다. 저사양·균형·고화질을 직접 선택하면 그 설정을 유지하며, 이 브라우저에 저장합니다.</p>
-      <dl><dt>카메라 회전</dt><dd>마우스 드래그 / 한 손가락</dd><dt>확대·이동</dt><dd>휠·우클릭 / 두 손가락</dd><dt>화면 버튼</dt><dd>오른쪽 ＋/− 확대 · ⟲/⟳ 회전 (누르고 있기)</dd><dt>바닥 더블클릭</dt><dd>그 위치로 카메라 이동</dd><dt>키보드 이동</dt><dd>WASD·방향키 이동 · Q/E 회전 · Shift 빠르게</dd><dt>무기 선택</dt><dd>1 배트 · 2 폭탄 · 3 레이저 · 4 음파 · 5 미사일 · 6 운석</dd><dt>지속 레이저</dt><dd>물체를 누른 채로 조준</dd><dt>빠른 복구 / 시점</dt><dd>R / F</dd></dl>
+      <dl><dt>카메라 회전</dt><dd>마우스 드래그 / 한 손가락</dd><dt>확대·이동</dt><dd>휠·우클릭 / 두 손가락</dd><dt>화면 버튼</dt><dd>오른쪽 ＋/− 확대 · ⟲/⟳ 회전 (누르고 있기)</dd><dt>바닥 더블클릭</dt><dd>그 위치로 카메라 이동</dd><dt>키보드 시점</dt><dd>W/S 상하 시점 · A/D 좌우 회전 · 방향키 이동 · Shift 빠르게</dd><dt>무기 선택</dt><dd>1 배트 · 2 폭탄 · 3 레이저 · 4 음파 · 5 미사일 · 6 운석</dd><dt>지속 레이저</dt><dd>물체를 누른 채로 조준</dd><dt>빠른 복구 / 시점</dt><dd>R / F</dd></dl>
       <p className="note">사진의 가구 형태와 제공된 평면도를 기준으로 재구성했습니다. 실측 치수와 미표기 수납장 위치는 추정값입니다. 기술부스·아나부스는 실내 사진을 보고 배치했습니다.</p>
       <button className="primary" onClick={() => setHelp(false)}>이제 부숴볼까요</button>
     </section></div>}

@@ -97,8 +97,9 @@ export function sleeveGeometry(side: number) {
   for(let i=0;i<p.count;i++) { const y=p.getY(i), t=y/.55; p.setXYZ(i,side*(.316-t*.052)+p.getX(i),.825+y,p.getZ(i)+.055*(1-t)); }
   g.computeVertexNormals(); return g;
 }
-export function trousersGeometry(side:number) {
-  const g=ringsGeometry([[.11,.071,.068],[.16,.075,.074],[.35,.081,.08],[.48,.085,.09],[.66,.095,.108],[.80,.103,.112],[.83,.095,.105]],28,32);
+export function trousersGeometry(side:number, segment: 'whole' | 'upper' | 'lower' = 'whole') {
+  const rings: Ring[] = [[.11,.071,.068],[.16,.075,.074],[.35,.081,.08],[.47,.085,.09],[.66,.095,.108],[.80,.103,.112],[.83,.095,.105]];
+  const g=ringsGeometry(rings.filter(r => segment === 'whole' || (segment === 'upper' ? r[0] >= .47 : r[0] <= .47)),28,segment === 'whole' ? 32 : 18);
   const p=g.getAttribute('position');
   for(let i=0;i<p.count;i++) p.setX(i,p.getX(i)+side*(.115+(1-p.getY(i)/.83)*.012));
   g.computeVertexNormals(); return g;
@@ -117,4 +118,72 @@ export function furGeometry() {
     if(j<5) { const n=j*4+i,next=j*4+(i+1)%4; idx.push(n,next,n+4,next,next+4,n+4); }
   }
   const g=new BufferGeometry(); g.setAttribute('position',new Float32BufferAttribute(p,3));g.setIndex(idx);g.computeVertexNormals();return g;
+}
+
+export function yujinHairGeometry(highlights = false) {
+  const parts: BufferGeometry[] = highlights ? [] : [ringsGeometry([[1.08,.23,.10,-.03],[1.25,.245,.135,-.02],[1.5,.205,.165,-.015],[1.72,.19,.16],[1.84,.15,.115],[1.91,.055,.035],[1.92,.002,.002]],36,40,Math.PI,Math.PI/2)];
+  for (const side of [-1,1]) for(let i=0;i<(highlights?7:17);i++) {
+    const t=i/(highlights?7:17), x=side*(.17+t*.065), z=.095-t*.20;
+    parts.push(stroke([[side*(.04+t*.08),1.89,.09-t*.11],[side*(.15+t*.03),1.80,.13-t*.18],
+      [x,1.62,z],[x-side*.018,1.43,z+.02],[x+side*.022,1.26,z+.035],[x-side*.006,1.12,z+.045],[x+side*.035,1.08+t*.025,z+.075]],highlights?.0018:.014,28));
+  }
+  if(!highlights) {
+    for(const side of [-1,1]) {
+      const lock=ringsGeometry([[1.06,.02,.018],[1.12,.065,.038],[1.25,.07,.045],[1.43,.06,.048],[1.61,.05,.05],[1.79,.032,.035]],28,48);
+      const p=lock.getAttribute('position');
+      for(let i=0;i<p.count;i++) {
+        const y=p.getY(i),t=(1.8-y)/.74;
+        p.setX(i,p.getX(i)+side*(.155+.095*t+.018*Math.sin(t*Math.PI*3)));
+        p.setZ(i,p.getZ(i)+.075+.018*Math.sin(t*Math.PI*4));
+      }
+      lock.computeVertexNormals();parts.push(lock);
+    }
+    const vertices:number[]=[],indices:number[]=[];
+    for(let row=0;row<=10;row++)for(let col=0;col<=32;col++) {
+      const x=(col/32-.5)*.32, t=row/10;
+      const lower=1.79+.027*Math.exp(-((x/.045)**2))+.006*Math.sin(x*75);
+      vertices.push(x,(1.91-.12*(x/.16)**2)*(1-t)+lower*t,.095+.065*t-.035*(x/.16)**2+.002*Math.sin(x*250));
+      if(row<10&&col<32){const n=row*33+col;indices.push(n,n+33,n+1,n+1,n+33,n+34);}
+    }
+    const bangs=new BufferGeometry();bangs.setAttribute('position',new Float32BufferAttribute(vertices,3));bangs.setIndex(indices);bangs.computeVertexNormals();parts.push(bangs);
+  }
+  if(highlights) for(const side of [-1,1]) for(let i=0;i<6;i++) {
+    const x=side*(.015+i*.021);
+    parts.push(stroke([[x*.5,1.9,.09],[x*.8,1.85,.14],[x,1.79,.157],[x+side*.018,1.78+Math.abs(x)*.1,.15]],highlights?.0012:.008,20));
+  }
+  const geometry=merge(parts),position=geometry.getAttribute('position');
+  for(let i=0;i<position.count;i++) {
+    position.setX(i,position.getX(i)*.96);
+    if(position.getY(i)>CHIN_Y)position.setY(i,CHIN_Y+(position.getY(i)-CHIN_Y)*.78);
+  }
+  geometry.computeVertexNormals();return geometry;
+}
+export function parkaGeometry() {
+  const geometry=ringsGeometry([[.32,.31,.19,-.015],[.55,.3,.18],[.8,.28,.17],[1.15,.276,.155],[1.30,.27,.135],[1.37,.195,.10]],52,48,Math.PI*2-1.3,.65);
+  const p=geometry.getAttribute('position');
+  for(let i=0;i<p.count;i++) {
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i),angle=Math.atan2(x,z);
+    const fold=.004*Math.sin(y*35+angle*4)+.002*Math.sin(y*59-angle*7);
+    p.setXYZ(i,x+Math.sin(angle)*fold,y+Math.max(0,1-(y-.32)/.13)*(.02+.02*Math.sin(angle*2)),z+Math.cos(angle)*fold);
+  }
+  const uv:number[]=[];
+  for(let i=0;i<p.count;i++)uv.push((Math.atan2(p.getX(i),p.getZ(i))+Math.PI)/(Math.PI*2),(p.getY(i)-.32)/1.05);
+  geometry.setAttribute('uv',new Float32BufferAttribute(uv,2));geometry.computeVertexNormals();return geometry;
+}
+export function parkaLapelGeometry(side:number) {
+  const geometry=new BufferGeometry();
+  geometry.setAttribute('position',new Float32BufferAttribute([[side*.065,1.38,.10],[side*.21,1.30,.145],[side*.18,1.12,.164],[side*.105,1.20,.17]].flat(),3));
+  geometry.setIndex([0,1,2,0,2,3]);geometry.computeVertexNormals();return geometry;
+}
+
+export function yujinSleeveGeometry(side:number) {
+  const geometry=ringsGeometry([[.825,.06,.057],[.85,.066,.063],[.94,.081,.074],[1.07,.092,.079],[1.20,.093,.08],[1.30,.085,.078],[1.36,.062,.06],[1.40,.025,.03]],32,44);
+  const p=geometry.getAttribute('position'),uv:number[]=[];
+  for(let i=0;i<p.count;i++) {
+    const y=p.getY(i),t=(y-.825)/.575,angle=Math.atan2(p.getX(i),p.getZ(i));
+    const fold=.0035*Math.sin(y*58+angle*3)*Math.sin(t*Math.PI);
+    p.setXYZ(i,side*(.316-.051*t+.018*Math.sin(t*Math.PI))+p.getX(i)+Math.sin(angle)*fold,y,p.getZ(i)+.035*(1-t)+Math.cos(angle)*fold);
+    uv.push(i%33/32,t);
+  }
+  geometry.setAttribute('uv',new Float32BufferAttribute(uv,2));geometry.computeVertexNormals();return geometry;
 }

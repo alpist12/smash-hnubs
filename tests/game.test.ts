@@ -100,3 +100,39 @@ test('weapons use distinct radii, decreasing explosion force and bounded debris'
   assert.equal(useGame.getState().debris.length, 80);
   assert.equal(useGame.getState().effects.length, 8);
 });
+
+
+test('bat damages only its selected target repeatedly; explosions still affect neighbours', async () => {
+  const { Vector3 } = await import('three');
+  const { attack, aim, targets, clearAttacks, tickAttacks } = await import('../src/physics/attacks');
+  const clock = Object.getOwnPropertyDescriptor(globalThis, 'performance')!;
+  let now = 10000;
+  Object.defineProperty(globalThis, 'performance', { configurable: true, value: { now: () => now } });
+  const hits: string[] = [];
+  try {
+    clearAttacks(); targets.clear();
+    useGame.setState({ ready: true, sound: false, weapon: 'bat' });
+    for (const [id, x] of [['selected', 0], ['neighbour', .2]] as const) targets.set(id, { point: () => new Vector3(x, 0, 0), hit: () => hits.push(id) });
+    attack([0, 0, 0], 'selected');
+    assert.deepEqual(hits, ['selected']);
+    for (let swing = 0; swing < 3; swing++) { now += 1000; attack([0, 0, 0], 'selected'); }
+    assert.deepEqual(hits, Array(4).fill('selected'));
+    hits.splice(1);
+    useGame.setState({ weapon: 'bomb' });
+    now += 2000; attack([0, 0, 0]); now += 1000; tickAttacks();
+    assert.deepEqual(hits, ['selected', 'selected', 'neighbour']);
+    hits.length = 0; now += 1000; useGame.setState({ weapon: 'bat' }); aim.last = -10;
+    attack([0, 0, 0]);
+    assert.deepEqual(hits, []);
+  } finally {
+    targets.clear(); clearAttacks(); Object.defineProperty(globalThis, 'performance', clock);
+  }
+});
+
+
+test('furniture contacts cannot enter the fracture path, even after an explosion', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/physics/Destructible.tsx', import.meta.url), 'utf8');
+  assert.ok(!source.includes('onContactForce='));
+  assert.match(source, /if \(broken.current \|\| fromContact \|\| amount < .1\) return;/);
+});

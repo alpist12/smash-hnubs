@@ -1,9 +1,19 @@
-import { Euler, Vector3 } from 'three';
+import { Box3, Euler, Vector3 } from 'three';
 import type { Item, V3 } from '../src/data/types';
 import type { Layout, Placement } from '../src/data/layout';
 import { ROOM, WORLD, DEFAULT_ITEMS } from '../src/data/room';
 import { model } from '../src/scene/models';
 
+export function itemBounds(item: Item) {
+  const bounds = new Box3();
+  for (const part of model(item)) for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) {
+    const p = new Vector3(x * part.size[0] / 2, y * part.size[1] / 2, z * part.size[2] / 2);
+    if (part.rotation) p.applyEuler(new Euler(...part.rotation));
+    p.add(new Vector3(...part.pos)).multiplyScalar(item.scale ?? 1).applyAxisAngle(new Vector3(0, 1, 0), item.rotation ?? 0).add(new Vector3(...item.pos));
+    bounds.expandByPoint(p);
+  }
+  return bounds;
+}
 export function checkRoomBounds(item: Item) {
   if (!item.pos.every(Number.isFinite) || !Number.isFinite(item.rotation ?? 0) || !Number.isFinite(item.scale ?? 1) || (item.scale ?? 1) < .2 || (item.scale ?? 1) > 3) throw new Error('위치와 크기 값을 확인해 주세요.');
   for (const part of model(item)) for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) {
@@ -47,7 +57,13 @@ export function duplicateItems(items: Item[], id: string) {
   if (!selected || selected.fixed) throw new Error('복사할 가구를 선택하세요.');
   const group = items.filter(item => item.id === id || onTop(selected, item));
   if (items.filter(item => !item.fixed).length + group.length > 200) throw new Error('성능을 위해 가구는 최대 200개까지 배치할 수 있습니다.');
-  for (const [dx, dz] of [[.4, .4], [-.4, .4], [.4, -.4], [-.4, -.4], [0, 0]]) {
+  const occupied = items.map(itemBounds);
+  const offsets: [number, number][] = [];
+  for (let x = -ROOM.width; x <= ROOM.width; x += .5) for (let z = WORLD.minZ - WORLD.maxZ; z <= WORLD.maxZ - WORLD.minZ; z += .5) {
+    if (x || z) offsets.push([x, z]);
+  }
+  offsets.sort((a, b) => a[0] ** 2 + a[1] ** 2 - b[0] ** 2 - b[1] ** 2);
+  for (const [dx, dz] of offsets) {
     const ids = new Set(items.map(item => item.id));
     try {
       const copies = group.map(item => {
@@ -57,6 +73,11 @@ export function duplicateItems(items: Item[], id: string) {
         const copy = { ...item, id, sourceId, pos: [item.pos[0] + dx, item.pos[1], item.pos[2] + dz] as V3 };
         checkRoomBounds(copy); return copy;
       });
+      // Include frame/feet and rotation; keep copied furniture clear of existing bodies.
+      if (copies.some(copy => {
+        const bounds = itemBounds(copy).expandByScalar(.025);
+        return occupied.some(other => other.intersectsBox(bounds));
+      })) continue;
       const parentIds = new Map(group.map((item, index) => [item.id, copies[index].id]));
       for (const item of copies) if (item.parentId && parentIds.has(item.parentId)) item.parentId = parentIds.get(item.parentId)!;
       return { items: [...items, ...copies], selected: copies.find(item => item.sourceId === (selected.sourceId ?? selected.id))!.id };

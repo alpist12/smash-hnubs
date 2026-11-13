@@ -1,13 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Euler, Vector3 } from 'three';
-import { fractureWallParts, expandWallSelection, splitPiece, seeded } from '../src/physics/fracture';
+import { fractureWallParts, expandWallSelection, wallFractureCount, splitPiece, seeded } from '../src/physics/fracture';
+import { specs } from '../src/data/room';
+import { WEAPONS } from '../src/weapons/config';
+import { GRAPHICS } from '../src/scene/graphics';
 import { partUV } from '../src/scene/partUV';
 import { model } from '../src/scene/models';
 import type { Item, Part, V3 } from '../src/data/types';
 
 const area = (p: [number, number][]) => Math.abs(p.reduce((sum, a, i) => { const b = p[(i + 1) % p.length]; return sum + a[0] * b[1] - b[0] * a[1]; }, 0)) / 2;
 const volume = (p: Part) => p.poly ? area(p.poly) * p.size[p.axis ?? 1] : p.size.reduce((a, b) => a * b, 1);
+
+test('walls resist ten bat hits before opening holes, while repeated explosives still break them', () => {
+  const wall: Item = { id: 'durable-wall', kind: 'wallSegment', pos: [0, 0, 0], width: 1.8, acoustic: 'both' };
+  const threshold = specs.wallSegment.threshold;
+  for (const quality of Object.values(GRAPHICS)) {
+    const pieces = fractureWallParts(wall, model(wall), quality.fragments, 23);
+    for (let hit = 1; hit <= 10; hit++) assert.equal(wallFractureCount(WEAPONS.bat.power * hit, threshold, pieces.length), 0);
+    assert.ok(wallFractureCount(WEAPONS.bat.power * 12, threshold, pieces.length) > 0);
+    assert.equal(wallFractureCount(WEAPONS.bomb.power, threshold, pieces.length), 0);
+    const meteor = wallFractureCount(WEAPONS.meteor.power, threshold, pieces.length);
+    assert.ok(meteor > 0 && meteor < pieces.length * .7);
+  }
+  assert.equal(Math.ceil(threshold / WEAPONS.bat.power), 25);
+  assert.equal(Math.ceil(threshold / WEAPONS.bomb.power), 6);
+  assert.equal(Math.ceil(threshold / WEAPONS.meteor.power), 2);
+});
 
 test('wall layers break into matching small cells without leaving a solid backing over the hole', () => {
   const item: Item = { id: 'wall-test', kind: 'wallSegment', pos: [0, 0, 0], width: 1.8, acoustic: 'both' };

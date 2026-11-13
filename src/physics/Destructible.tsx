@@ -5,7 +5,7 @@ import { Euler, InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Item, Part, V3, Debris, Finish } from '../data/types';
 import { ITEMS, specs } from '../data/room';
-import { fractureParts, fractureWallParts, expandWallSelection, splitPiece, prismPoints } from './fracture';
+import { fractureParts, fractureWallParts, expandWallSelection, wallFractureCount, splitPiece, prismPoints } from './fracture';
 import { contents, PROPS } from '../data/contents';
 import { playCrack, playCrumble, playThud } from '../game/audio';
 import { model } from '../scene/models';
@@ -22,7 +22,7 @@ import { aim, attack, targets, nextEffectId } from './attacks';
 // 가구=그룹1(전부와 충돌), 파편=그룹2(고정 바닥·벽(그룹4 포함)만 충돌) → 파편이 가구를 밀어 터뜨리지 않는다.
 const FURNITURE_GROUPS = 0x0001ffff, DEBRIS_GROUPS = 0x00020004;
 export const Destructible = memo(function Destructible({ item }: { item: Item }) {
-  const body = useRef<RapierRigidBody>(null), damage = useRef(0), broken = useRef(false), lastContact = useRef(0);
+  const body = useRef<RapierRigidBody>(null), damage = useRef(0), broken = useRef(false);
   const lastDust = useRef(0);
   const [stage, setStage] = useState(0), stageRef = useRef(0);
   const [removed, setRemoved] = useState<number[]>([]), removedRef = useRef<number[]>([]);
@@ -39,7 +39,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
   // 수납장 안에 든 장비(카메라·마이크 등). 평소엔 안쪽에 보이고, 많이 부서지면 밖으로 쏟아진다.
   const inside = useMemo(() => contents(item).map(c => ({ ...c, model: PROPS[c.prop]() })), [item]);
   const [spilled, setSpilled] = useState(false), spilledRef = useRef(false);
-  const spec = specs[item.kind], spawned = useRef(performance.now());
+  const spec = specs[item.kind];
   const round = useGame(s => s.round), ceiling = useGame(s => s.ceiling);
   const view = useRef<import('three').Group>(null), shown = useRef(true);
   // 벽·문·벽 부착물은 카메라 위치에 따라 잘라 보이고(컷어웨이), 숨겨진 동안에는 클릭이 뒤로 통과한다.
@@ -73,10 +73,8 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     const centerY = (Math.min(...parts.map(p => p.pos[1] - p.size[1] / 2)) + Math.max(...parts.map(p => p.pos[1] + p.size[1] / 2))) / 2;
     const point = () => { const t = rb.translation(), r = rb.rotation(); return new Vector3(0, centerY * (item.scale ?? 1), 0).applyQuaternion(new Quaternion(r.x, r.y, r.z, r.w)).add(t); };
     const hit = (amount: number, impulse: V3, location: V3, maxSpeed = 3, fromContact = false) => {
-      if (broken.current || amount < .1) return;
-      // 가구끼리 부딪힌 충격만으로는 부서지지 않는다(금만 간다). 실제 무기로 맞아야 깨진다.
-      if (fromContact) amount = Math.min(amount, Math.max(0, spec.threshold * .9 - damage.current));
-      if (amount < .1) return;
+      if (broken.current || fromContact || amount < .1) return;
+      // 접촉은 Rapier 이동만 처리한다. 무기 명중만 조각을 제거한다.
       if (item.kind === 'light' && !useGame.getState().ceiling) return;
       const pieces = piecesRef.current ??= (item.kind === 'wallSegment' ? fractureWallParts.bind(null, item) : fractureParts)(parts, GRAPHICS[useGame.getState().quality].fragments, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7)));
       damage.current += amount;
@@ -87,8 +85,9 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         const t = rb.translation(), r = rb.rotation(), q = new Quaternion(r.x, r.y, r.z, r.w), scale = item.scale ?? 1, origin = new Vector3(t.x, t.y, t.z);
         const local = new Vector3(...location).sub(origin).applyQuaternion(q.clone().invert()).divideScalar(scale);
         const ratio = damage.current / spec.threshold, cap = Math.floor(pieces.length * .7);
-        let need = Math.min(cap, Math.floor(ratio * cap)) - removedRef.current.length;
-        if (need <= 0 && amount >= 15 && removedRef.current.length < cap) need = 1;
+        const wall = item.kind === 'wallSegment';
+        let need = (wall ? wallFractureCount(damage.current, spec.threshold, pieces.length) : Math.min(cap, Math.floor(ratio * cap))) - removedRef.current.length;
+        if (!wall && need <= 0 && amount >= 15 && removedRef.current.length < cap) need = 1;
         if (need > 0 && pieces.length > 1) {
           const nearest = pieces.map((piece, i) => ({ i, d: new Vector3(...piece.pos).distanceToSquared(local) })).filter(({ i }) => !removedRef.current.includes(i)).sort((x, y) => x.d - y.d).slice(0, need).map(({ i }) => i);
           const pick = item.kind === 'wallSegment' ? expandWallSelection(pieces, nearest, removedRef.current) : nearest;
@@ -96,7 +95,8 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
           if (sound()) { const glass = pick.some(i => pieces[i].finish === 'glass'); playCrack(glass ? 'glass' : pieces[pick[0]]?.finish ?? mainFinish, .3 + pick.length * .12 + amount / 80); }
           removedRef.current = [...removedRef.current, ...pick];
           // 받쳐 주는 조각이 없어져 공중에 뜬 조각은 그대로 떨어진다(물리 법칙).
-          const floating = unsupported(pieces, removedRef.current, !!item.fixed && (item.bottom ?? 0) > .5);
+          // Walls remain attached to the ceiling and adjacent sections around a local hole.
+          const floating = wall ? [] : unsupported(pieces, removedRef.current, !!item.fixed && (item.bottom ?? 0) > .5);
           if (floating.length) {
             useGame.getState().addDebris(floating.map((i, k) => pieceDebris(pieces[i], q, origin, scale, location, .35, now + 50 + k)));
             removedRef.current = [...removedRef.current, ...floating];
@@ -169,16 +169,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
   if (stage === 4) return null;
   // 조각이 떨어지기 시작하면 충돌 모양도 남은 조각으로 바꿔, 받침이 사라진 물건은 실제로 기울거나 넘어진다.
   const colliderParts = removed.length ? pieces.filter((piece, i) => !removed.includes(i) && piece.collider !== false) : solidColliders;
-  return <RigidBody ref={body} name={item.id} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1} type={item.fixed ? 'fixed' : 'dynamic'} colliders={false} canSleep linearDamping={.5} angularDamping={.7} friction={.65} restitution={.12}
-    onContactForce={event => {
-      const now = performance.now();
-      if (now - spawned.current < 1800 || now - lastContact.current < 300 || broken.current || item.fixed) return;
-      const impact = event.totalForceMagnitude / 60;
-      if (impact > spec.collision) {
-        lastContact.current = now;
-        targets.get(item.id)?.hit(Math.min(30, (impact - spec.collision) * .3), [0, .1, 0], targets.get(item.id)!.point().toArray() as V3, 1, true);
-      }
-    }}>
+  return <RigidBody ref={body} name={item.id} position={item.pos} rotation={[0, item.rotation ?? 0, 0]} scale={item.scale ?? 1} type={item.fixed ? 'fixed' : 'dynamic'} colliders={false} canSleep linearDamping={.5} angularDamping={.7} friction={.65} restitution={.12}>
     {colliderParts.map((part, index) => <CuboidCollider key={`${removed.length}:${index}`} args={part.size.map(n => Math.max(.008, n / 2)) as V3} position={part.pos} rotation={part.rotation} mass={spec.mass / colliderParts.length} collisionGroups={FURNITURE_GROUPS} />)}
     <group ref={view} visible={item.kind !== 'light' || ceiling} name={`model:${item.id}`} onPointerMove={onAim} onPointerOver={onAim} onPointerOut={() => { if (aim.target === item.id) { aim.target = ''; useGame.setState({ hovered: '' }); } }}
       onPointerDown={e => { if (!shown.current) return; onAim(e); if (useGame.getState().weapon === 'laser' && e.button === 0) { aim.holding = true; attack(aim.point, item.id); } }}

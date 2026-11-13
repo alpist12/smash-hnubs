@@ -75,3 +75,15 @@ test('desk-20 partition survives desk removal and can move and copy independentl
   assert.equal(restored.filter(item => item.kind === 'partition').length, 2);
   assert.ok(!restored.some(item => item.id === 'desk-20'));
 });
+
+
+test('copy searches for clear space using full rotated furniture bounds', async () => {
+  const { itemBounds } = await import('../tools/layout-operations');
+  for (const kind of ['desk', 'partition'] as const) {
+    const selected = DEFAULT_ITEMS.find(i => i.kind === kind)!;
+    const copied = duplicateItems(DEFAULT_ITEMS, selected.id);
+    for (const copy of copied.items.filter(i => !DEFAULT_ITEMS.some(original => original.id === i.id))) {
+      for (const original of DEFAULT_ITEMS) assert.ok(!itemBounds(copy).intersectsBox(itemBounds(original)), `${copy.id} overlaps ${original.id}`);
+    }
+  }
+});

@@ -1,4 +1,13 @@
 import type { Item, V3 } from './types';
+import savedLayout from './layout.json';
+
+// Old shipped overlaps are repaired without clearing independently edited placements.
+const separation: Record<string, V3> = {
+  'desk-73': [-.1, 0, 0], 'desk-88': [.1, 0, 0], 'copy-desk-88-2': [-1, 0, 0],
+  'mediaCabinet-92': [-.4, 0, 0], 'mediaCabinet-93': [-.4, 0, 0], 'mediaCabinet-94': [-.4, 0, 0],
+  'copy-mediaCabinet-94-1': [-.4, 0, 0], 'carton-95': [-.4, 0, 0], 'carton-96': [-.4, 0, 0],
+  'copy-partition-72-1': [0, 0, 1],
+};
 export interface Placement { pos: V3; rotation: number; scale: number; sourceId?: string; hidden?: boolean; parentId?: string }
 export type Layout = Record<string, Placement>;
 
@@ -25,5 +34,12 @@ export function applyLayout(items: Item[], value: unknown): Item[] {
   for (const item of items) append(item, item.id);
   for (const [id, entry] of Object.entries(entries)) if (!originals.has(id)) append(originals.get((entry as Placement).sourceId!)!, id);
   if (placed.filter(item => !item.fixed).length > 200) throw new Error('가구는 최대 200개까지 배치할 수 있습니다.');
+  const baseline: Record<string, { pos: number[]; rotation: number; scale: number; parentId?: string }> = savedLayout;
+  for (const item of placed) {
+    const saved = baseline[item.id], old = entries[item.id] as Placement | undefined;
+    const shift = separation[item.id] ?? (saved?.parentId ? separation[saved.parentId] : undefined);
+    if (saved && old && shift && old.rotation === saved.rotation && old.scale === saved.scale &&
+      item.pos.every((n, i) => Math.abs(n + shift[i] - saved.pos[i]) < 1e-6)) item.pos = [saved.pos[0], saved.pos[1], saved.pos[2]];
+  }
   return placed;
 }
