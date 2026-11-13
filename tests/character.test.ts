@@ -43,3 +43,25 @@ test('sculpted character has a projected nose, curved face features and bounded 
     geometry.dispose();
   }
 });
+
+
+import { CharacterHealth, CHARACTER_BAT_HITS } from '../src/game/characterHealth';
+import bat from '../src/weapons/bat';
+test('character leaves on the 25th bat hit, ignores contact and returns with fresh health', () => {
+  const health = new CharacterHealth(), combo = new HitCombo();
+  assert.equal(CHARACTER_BAT_HITS, 25);
+  for (let hit = 1; hit < 25; hit++) {
+    assert.equal(health.hit(bat.power), false);
+    assert.equal(health.batHits, hit);
+  }
+  combo.hit(0); combo.expire(10000);
+  assert.equal(health.batHits, 24);
+  for (const invalid of [0, -10, NaN, Infinity]) assert.equal(health.hit(invalid), false);
+  assert.equal(health.hit(bat.power, true), false);
+  assert.equal(health.hit(bat.power), true);
+  assert.equal(health.batHits, 25);
+  assert.equal(new CharacterHealth().gone, false);
+  const mixed = new CharacterHealth();
+  assert.equal(mixed.hit(bat.power * 24.5), false);
+  assert.equal(mixed.hit(bat.power * .5), true);
+});
