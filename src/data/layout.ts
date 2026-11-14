@@ -8,7 +8,7 @@ const separation: Record<string, V3> = {
   'copy-mediaCabinet-94-1': [-.4, 0, 0], 'carton-95': [-.4, 0, 0], 'carton-96': [-.4, 0, 0],
   'copy-partition-72-1': [0, 0, 1],
 };
-export interface Placement { pos: V3; rotation: number; scale: number; sourceId?: string; hidden?: boolean; parentId?: string }
+export interface Placement { pos: V3; rotation: number; scale: number; widthScale?: number; sourceId?: string; hidden?: boolean; parentId?: string }
 export type Layout = Record<string, Placement>;
 
 export function applyLayout(items: Item[], value: unknown): Item[] {
@@ -27,9 +27,9 @@ export function applyLayout(items: Item[], value: unknown): Item[] {
     if (!p) { placed.push(item); return; }
     if (item.fixed) throw new Error(`고정 구조물은 배치 가져오기 대상이 아닙니다: ${id}`);
     if (p.hidden === true) return;
-    if (!Array.isArray(p.pos) || p.pos.length !== 3 || !p.pos.every(Number.isFinite) || !Number.isFinite(p.rotation) || !Number.isFinite(p.scale) || p.scale < .2 || p.scale > 3) throw new Error(`유효하지 않은 위치·회전·크기: ${id}`);
+    if (!Array.isArray(p.pos) || p.pos.length !== 3 || !p.pos.every(Number.isFinite) || !Number.isFinite(p.rotation) || !Number.isFinite(p.scale) || p.scale < .2 || p.scale > 3 || (p.widthScale !== undefined && !(p.widthScale >= .2 && p.widthScale <= 3))) throw new Error(`유효하지 않은 위치·회전·크기: ${id}`);
     if (p.parentId !== undefined && (typeof p.parentId !== 'string' || p.parentId === id || (!originals.has(p.parentId) && !entries[p.parentId]))) throw new Error(`유효하지 않은 책상 연결: ${id}`);
-    placed.push({ ...item, id, pos: [...p.pos], rotation: p.rotation, scale: p.scale, sourceId: originals.has(id) ? undefined : p.sourceId, parentId: p.parentId ?? item.parentId });
+    placed.push({ ...item, id, pos: [...p.pos], rotation: p.rotation, scale: p.scale, ...(p.widthScale !== undefined ? { widthScale: p.widthScale } : {}), sourceId: originals.has(id) ? undefined : p.sourceId, parentId: p.parentId ?? item.parentId });
   }
   for (const item of items) append(item, item.id);
   for (const [id, entry] of Object.entries(entries)) if (!originals.has(id)) append(originals.get((entry as Placement).sourceId!)!, id);

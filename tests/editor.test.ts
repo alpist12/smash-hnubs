@@ -87,3 +87,16 @@ test('copy searches for clear space using full rotated furniture bounds', async 
     }
   }
 });
+
+test('width scale stretches only the X extent of a model and survives saving', async () => {
+  const { model } = await import('../src/scene/models');
+  const { applyLayout } = await import('../src/data/layout');
+  const base = { id: 'w-test', kind: 'desk' as const, pos: [0, 0, 0] as [number, number, number] };
+  const span = (parts: ReturnType<typeof model>, a: 0 | 1 | 2) => Math.max(...parts.map(p => p.pos[a] + p.size[a] / 2)) - Math.min(...parts.map(p => p.pos[a] - p.size[a] / 2));
+  const normal = model(base), wide = model({ ...base, widthScale: 1.5 });
+  assert.ok(Math.abs(span(wide, 0) - span(normal, 0) * 1.5) < 1e-9);
+  assert.equal(span(wide, 1), span(normal, 1)); assert.equal(span(wide, 2), span(normal, 2));
+  const [placed] = applyLayout([base], { 'w-test': { pos: [0, 0, 0], rotation: 0, scale: 1, widthScale: 1.5 } });
+  assert.equal(placed.widthScale, 1.5);
+  assert.throws(() => applyLayout([base], { 'w-test': { pos: [0, 0, 0], rotation: 0, scale: 1, widthScale: 9 } }));
+});

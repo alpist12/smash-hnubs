@@ -5,6 +5,13 @@ const cylinder = (name: string, pos: V3, size: V3, finish: Finish = 'metal', col
 
 // Named local-space parts can be replaced by meshes from a Blender GLB without changing physics or scoring.
 export function model(item: Item): Part[] {
+  const w = item.widthScale ?? 1;
+  // 편집기의 너비 배율: 부품의 가로(X) 위치·크기만 늘려 충돌체와 파괴 조각도 같이 따라온다.
+  // ponytail: 기울어진 부품(rotation)·다각형(poly) 단면은 X로만 늘려 근사한다. 어색하면 부품별 회전을 고려해 늘릴 것.
+  return w === 1 ? scaledModel(item) : scaledModel(item).map(part => ({ ...part, pos: [part.pos[0] * w, part.pos[1], part.pos[2]] as V3, size: [part.size[0] * w, part.size[1], part.size[2]] as V3 }));
+}
+
+function scaledModel(item: Item): Part[] {
   const parts = modelParts(item);
   const widths: Partial<Record<Item['kind'], number>> = { monitor: .95, mixer: 1.05, chair: .48, sledChair: .52, foldingChair: .43 };
   const baseWidth = widths[item.kind];

@@ -48,7 +48,7 @@ export function changePlacement(items: Item[], id: string, placement: Partial<Pl
   });
 }
 export function toLayout(items: Item[]): Layout {
-  const layout: Layout = Object.fromEntries(items.filter(item => !item.fixed).map(item => [item.id, { pos: item.pos.map(n => Math.round(n * 1e6) / 1e6) as V3, rotation: item.rotation ?? 0, scale: item.scale ?? 1, ...(item.sourceId ? { sourceId: item.sourceId } : {}), ...(item.parentId ? { parentId: item.parentId } : {}) }]));
+  const layout: Layout = Object.fromEntries(items.filter(item => !item.fixed).map(item => [item.id, { pos: item.pos.map(n => Math.round(n * 1e6) / 1e6) as V3, rotation: item.rotation ?? 0, scale: item.scale ?? 1, ...(item.widthScale && item.widthScale !== 1 ? { widthScale: item.widthScale } : {}), ...(item.sourceId ? { sourceId: item.sourceId } : {}), ...(item.parentId ? { parentId: item.parentId } : {}) }]));
   for (const original of DEFAULT_ITEMS) if (!original.fixed && !items.some(item => item.id === original.id)) layout[original.id] = { pos: original.pos, rotation: original.rotation ?? 0, scale: 1, hidden: true };
   return layout;
 }
