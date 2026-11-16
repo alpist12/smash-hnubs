@@ -1,5 +1,6 @@
 import { GRAPHICS } from './graphics';
 import { Meteor } from './Meteor';
+import { NuclearBlast } from './NuclearBlast';
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { AdditiveBlending, Group, Mesh, MeshBasicMaterial, PointLight, Quaternion, Vector3 } from 'three';
@@ -233,5 +234,6 @@ export function Effects() {
     <BatSwing effects={effects} />
     <LaserBeam />
     <Meteor />
+    <NuclearBlast />
   </>;
 }

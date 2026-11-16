@@ -4,5 +4,6 @@ import laser from './laser';
 import sonic from './sonic';
 import missile from './missile';
 import meteor from './meteor';
-export const WEAPONS = { bat, bomb, laser, sonic, missile, meteor };
+import nuke from './nuke';
+export const WEAPONS = { bat, bomb, laser, sonic, missile, meteor, nuke };
 export type WeaponId = keyof typeof WEAPONS;

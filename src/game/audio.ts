@@ -7,6 +7,8 @@ import type { Finish } from '../data/types';
  */
 let ctx: AudioContext | undefined, master: GainNode | undefined, noiseBuffer: AudioBuffer | undefined;
 let recent: number[] = [];
+let nuclearNodes: AudioScheduledSourceNode[] = [];
+export function stopNuclear() { for (const node of nuclearNodes) { try { node.stop(); } catch { /* 이미 끝난 노드 */ } } nuclearNodes = []; }
 let meteorFallNodes: AudioScheduledSourceNode[] = [];
 export function stopMeteorFall() { for (const node of meteorFallNodes) { try { node.stop(); } catch { /* 이미 끝난 노드 */ } } meteorFallNodes = []; }
 export function audioContext(resume = true) {
@@ -54,12 +56,25 @@ const on = () => { const c = audioContext(); return c && master && budget() ? c 
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {
-  const c = type === 'meteor' ? audioContext() : on(); if (!c) return; const t = c.currentTime;
+  const c = type === 'meteor' || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
   switch (type) {
     case 'bat': // 딱! 나무 배트 타격 + 묵직한 쿵
       noise(c, t, .06, 'bandpass', vary(2400), 900, .9, .001, 1.4);
       tone(c, t, .16, 'triangle', vary(190), 70, .55);
       noise(c, t + .01, .25, 'lowpass', 900, 120, .35, .004);
+      break;
+    case 'nuke-arm':
+      stopNuclear();
+      for (let i = 0; i < 3; i++) nuclearNodes.push(tone(c, t + i * .9, .24, 'sine', 880, 660, .3, .01));
+      nuclearNodes.push(tone(c, t + .55, 2.45, 'sine', 180, 1200, .15, 1.7));
+      const flight = noise(c, t + .55, 2.45, 'bandpass', 280, 2600, .35, 1.8); flight.loop = true;
+      nuclearNodes.push(flight);
+      break;
+    case 'nuke':
+      stopNuclear();
+      nuclearNodes.push(noise(c, t, .09, 'bandpass', 2400, 200, .6, .001), tone(c, t, 5, 'sine', 65, 20, .9, .01));
+      const rumble = noise(c, t, 4.8, 'lowpass', 1300, 35, .85, .01); rumble.loop = true;
+      nuclearNodes.push(rumble, noise(c, t + .08, 2.3, 'bandpass', 500, 90, .35, .1));
       break;
     case 'meteor':
       tone(c, t, 2.4, 'sine', 85, 24, .9, .004);

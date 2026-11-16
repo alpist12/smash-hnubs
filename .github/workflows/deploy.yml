@@ -19,11 +19,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          VITE_LEADERBOARD_API: ${{ vars.VITE_LEADERBOARD_API }}
       - run: touch dist/.nojekyll
       - uses: peaceiris/actions-gh-pages@v4
         with:

@@ -10,7 +10,8 @@
     "test": "tsx --test tests/*.test.ts",
     "export:model": "tsx scripts/export-model.ts",
     "import:layout": "tsx scripts/import-layout.ts",
-    "editor": "tsx tools/editor-server.ts"
+    "editor": "tsx tools/editor-server.ts",
+    "dev:ranking": "tsx tools/leaderboard-server.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

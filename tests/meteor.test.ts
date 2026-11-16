@@ -36,3 +36,18 @@ test('meteor warns first, hits once at landing, and reset cancels a pending stri
     targets.clear();clearAttacks();Object.defineProperty(globalThis,'performance',original);
   }
 });
+
+test('switching from a bat to meteor fires on the first click; only its own cooldown applies',()=>{
+ const original=Object.getOwnPropertyDescriptor(globalThis,'performance')!;let now=100;
+ Object.defineProperty(globalThis,'performance',{configurable:true,value:{now:()=>now}});
+ try{
+  clearAttacks();useGame.getState().reset();useGame.setState({ready:true,sound:false,weapon:'bat'});
+  attack([0,0,0]);now+=10;useGame.getState().select('meteor');attack([0,0,0]);
+  assert.equal(useGame.getState().meteor?.born,now);
+  now+=6401;tickAttacks();assert.equal(useGame.getState().meteor,null);
+  useGame.getState().select('bat');attack([0,0,0]);useGame.getState().select('meteor');attack([0,0,0]);
+  assert.equal(useGame.getState().meteor,null);assert.match(useGame.getState().hint,/재사용/);
+  now+=1100;attack([0,0,0]);assert.ok(useGame.getState().meteor);
+  useGame.getState().reset();useGame.getState().select('nuke');now+=1;attack([0,0,0]);assert.ok(useGame.getState().nuke);
+ }finally{clearAttacks();Object.defineProperty(globalThis,'performance',original);}
+});

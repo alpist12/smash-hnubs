@@ -1,3 +1,4 @@
+import type { WeaponId } from '../weapons/config';
 import { GRAPHICS } from '../scene/graphics';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { RigidBody, CuboidCollider, ConvexHullCollider, type RapierRigidBody } from '@react-three/rapier';
@@ -72,11 +73,12 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     };
     const centerY = (Math.min(...parts.map(p => p.pos[1] - p.size[1] / 2)) + Math.max(...parts.map(p => p.pos[1] + p.size[1] / 2))) / 2;
     const point = () => { const t = rb.translation(), r = rb.rotation(); return new Vector3(0, centerY * (item.scale ?? 1), 0).applyQuaternion(new Quaternion(r.x, r.y, r.z, r.w)).add(t); };
-    const hit = (amount: number, impulse: V3, location: V3, maxSpeed = 3, fromContact = false) => {
+    const hit = (amount: number, impulse: V3, location: V3, maxSpeed = 3, fromContact = false, weapon?: WeaponId) => {
       if (broken.current || fromContact || amount < .1) return;
       // 접촉은 Rapier 이동만 처리한다. 무기 명중만 조각을 제거한다.
-      if (item.kind === 'light' && !useGame.getState().ceiling) return;
-      const pieces = piecesRef.current ??= (item.kind === 'wallSegment' ? fractureWallParts.bind(null, item) : fractureParts)(parts, GRAPHICS[useGame.getState().quality].fragments, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7)));
+      const nuclear = weapon === 'nuke';
+      if (item.kind === 'light' && !useGame.getState().ceiling && !nuclear) return;
+      const pieces = piecesRef.current ??= nuclear ? parts : (item.kind === 'wallSegment' ? fractureWallParts.bind(null, item) : fractureParts)(parts, GRAPHICS[useGame.getState().quality].fragments, Math.abs([...item.id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0), 7)));
       damage.current += amount;
       const nextStage = Math.min(3, Math.ceil(damage.current / spec.threshold * 3));
       const now = performance.now();
@@ -125,10 +127,11 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
       if (aim.target === item.id) { aim.target = ''; useGame.setState({ hovered: '' }); }
       if (!useGame.getState().destroy(item.id, spec.score)) return;
       // 벽이 무너지면 거기 걸려 있던 화이트보드·시계 등도 함께 떨어져 부서진다.
-      ITEMS.filter(child => child.parentId === item.id && child.fixed).forEach((child, i) => setTimeout(() => targets.get(child.id)?.hit(1e6, [0, .4, 0], child.pos as V3), 60 + i * 50));
+      if (!nuclear) ITEMS.filter(child => child.parentId === item.id && child.fixed).forEach((child, i) => setTimeout(() => targets.get(child.id)?.hit(1e6, [0, .4, 0], child.pos as V3), 60 + i * 50));
       const origin = rb.translation(), rot = rb.rotation(), q = new Quaternion(rot.x, rot.y, rot.z, rot.w);
-      const major = shards(pieces.filter((_, i) => !removedRef.current.includes(i)), .3);
-      spill(1);
+      const remaining = pieces.filter((_, i) => !removedRef.current.includes(i));
+      const major = nuclear ? remaining.slice(0, 6) : shards(remaining, .3);
+      if (!nuclear) spill(1);
       if (sound()) playCrumble(item.kind === 'windowWall' || item.kind === 'glassPane' || major.some(p => p.finish === 'glass') ? 'glass' : mainFinish, major.length);
       const size = Math.max(...parts.map(p => Math.max(...p.size))) * (item.scale ?? 1);
       aim.shake = Math.max(aim.shake, Math.min(.12, .02 + size * .03));
