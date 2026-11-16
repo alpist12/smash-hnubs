@@ -22,16 +22,17 @@ test('WASD changes viewing angles without panning; arrow keys retain view-relati
   assert.ok(Number.isFinite(move(['ArrowUp'], 0, 0).z));
 });
 
-test('main-to-technical separator stays visible in every preset while outside walls keep cutaway', () => {
+test('both internal separators stay visible in every preset while outside walls keep cutaway', () => {
   const before = useGame.getState();
   try {
     useGame.setState({ walls: true });
     for (const cameraMode of ['home', 'technical', 'announcer', 'photo', 'top', 'character'] as const) {
       useGame.setState({ cameraMode });
       assert.equal(wallVisible('back', 10, 10), true);
+      for(const [x,z] of [[10,10],[-10,-18],[0,-13],[0,-7]])assert.equal(wallVisible('booth',x,z),true);
     }
     assert.equal(wallVisible('left', -8, 0), false);
     assert.equal(wallVisible('right', 8, 0), false);
-    useGame.setState({ walls: false }); assert.equal(wallVisible('back', 0, 0), false);
+    useGame.setState({ walls: false }); assert.equal(wallVisible('back', 0, 0), false); assert.equal(wallVisible('booth',0,0),false);
   } finally { useGame.setState({ walls: before.walls, cameraMode: before.cameraMode }); }
 });

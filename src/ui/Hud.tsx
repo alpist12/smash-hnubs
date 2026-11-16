@@ -1,10 +1,11 @@
+import { RankingPreview } from './RankingPreview';
 import { Leaderboard } from './Leaderboard';
 import { QUALITY_LABELS, type GraphicsMode } from '../scene/graphics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGame } from '../game/store';
 import { CHARACTERS } from '../data/characters';
 import { TOTAL } from '../data/room';
-import { WEAPONS, type WeaponId } from '../weapons/config';
+import { WEAPONS, damageRangeLabel, type WeaponId } from '../weapons/config';
 import { Splash } from './Splash';
 import { UpdateNotice } from './UpdateNotice';
 import { MeteorCinematic } from './MeteorCinematic';
@@ -76,6 +77,7 @@ export function Hud() {
         <label className="room-navigation pill"><Icon name="home" size={15}/><span className="sr-only">공간 보기</span><select aria-label="공간 보기" value={cameraMode === 'photo' ? 'home' : cameraMode} onChange={e => camera(e.target.value as 'home' | 'top' | 'technical' | 'announcer' | 'character' | 'yujin')}><option value="home">메인룸</option><option value="technical">기술부스</option><option value="announcer">아나부스</option>{CHARACTERS.map(profile => <option key={profile.id} value={profile.camera}>{profile.name}</option>)}<option value="top">방송국 전체</option></select></label>
       </div>
       <label className="graphics-control pill"><span>화질</span><select aria-label="그래픽 품질" value={graphicsMode} onChange={e => useGame.getState().selectGraphics(e.target.value as GraphicsMode)}><option value="auto">자동 · {QUALITY_LABELS[quality]}</option><option value="low">저사양 · 속도 우선</option><option value="medium">균형</option><option value="high">고화질 · 화질 우선</option></select></label>
+      <RankingPreview onOpen={() => setRanking(true)} />
     </header>
     <section className="scoreboard" aria-label="게임 점수">
       <div className="score-box"><span>SCORE</span><strong data-testid="score" data-score={score}><Count value={score}/></strong></div>
@@ -89,7 +91,7 @@ export function Hud() {
     <div className="camera-pad" aria-label="카메라 조작">{([['zoomIn', '확대', 'zoom', 1], ['zoomOut', '축소', 'zoom', -1], ['rotateLeft', '왼쪽으로 돌리기', 'rotate', -1], ['rotateRight', '오른쪽으로 돌리기', 'rotate', 1]] as const).map(([icon, name, key, value]) => <button key={icon} aria-label={name} title={`${name} (누르고 있기)`}
       onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); cameraInput[key] = value; }} onPointerUp={() => { cameraInput[key] = 0; }} onPointerCancel={() => { cameraInput[key] = 0; }} onLostPointerCapture={() => { cameraInput[key] = 0; }}><Icon name={icon} size={18}/></button>)}</div>
     <footer>
-      <p className="weapon-description" key={weapon}>{WEAPONS[weapon].description}</p>
+      <p className="weapon-description" key={weapon}>{damageRangeLabel(weapon)} · {WEAPONS[weapon].description}</p>
       <div className="toolbar">
         <div className="weapon-bar" role="group" aria-label="무기 선택">{Object.values(WEAPONS).map(w => <button key={w.id} aria-pressed={weapon === w.id} aria-label={w.label} onClick={() => useGame.getState().select(w.id as WeaponId)}><kbd>{w.key}</kbd>{w.id === 'nuke' && <em className="badge">NEW</em>}<Icon name={w.id} size={26}/><span>{w.short}</span></button>)}</div>
         <div className="toolbar-divider" aria-hidden="true"/>

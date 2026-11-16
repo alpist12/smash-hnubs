@@ -1,9 +1,12 @@
+export const RANKING_UPDATED='hnubs:ranking-updated';
 export type RankingEntry={nickname:string;score:number;destroyed:number;elapsed:number;created:number};
 const configured=import.meta.env?.VITE_LEADERBOARD_API?.trim();
 export const RANKING_API=configured?.replace(/\/$/,'')??(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)?'http://localhost:8787':'');
 async function request(path:string,body?:unknown){
  let response:Response;try{response=await fetch(RANKING_API+path,{...(body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),signal:AbortSignal.timeout(10000)});}catch{throw new Error('랭킹 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
- const result=await response.json();if(!response.ok)throw new Error(result.error??'랭킹 요청에 실패했습니다.');return result;
+ const result=await response.json();if(!response.ok)throw new Error(result.error??'랭킹 요청에 실패했습니다.');
+ if(typeof window!=='undefined'&&(path==='/scores'||path.endsWith('/nuke')))window.dispatchEvent(new Event(RANKING_UPDATED));
+ return result;
 }
 export class RankingRun {
  private round=-1;private run:Promise<string>|null=null;private nuclear=false;

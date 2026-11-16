@@ -14,7 +14,7 @@ function Block({ pos, size, finish = 'fabric', color = '#8295a2', rotation }: { 
   return <PartMesh part={{ name: '부스 구조', pos, size, finish, color, round: .01, rotation }} />;
 }
 function floorHandlers() {
-  const move = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); aim.point = e.point.toArray() as V3; aim.target = ''; aim.normal = [0, 1, 0]; };
+  const move = (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); aim.active = true; aim.point = e.point.toArray() as V3; aim.target = ''; aim.normal = [0, 1, 0]; };
   return {
     onPointerMove: move,
     onPointerDown: (e: ThreeEvent<PointerEvent>) => { move(e); if (e.button === 0 && useGame.getState().weapon === 'laser') { aim.holding = true; attack(aim.point); } },

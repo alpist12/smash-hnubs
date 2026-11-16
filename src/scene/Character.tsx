@@ -108,7 +108,7 @@ export function Character({ profile }: { profile: CharacterProfile }) {
   });
   function onAim(e: ThreeEvent<PointerEvent>) {
     if (health.current.gone) return;
-    e.stopPropagation(); aim.point = e.point.toArray() as V3; aim.target = ID;
+    e.stopPropagation(); aim.active = true; aim.point = e.point.toArray() as V3; aim.target = ID;
     if (e.face) aim.normal = e.face.normal.clone().transformDirection(e.object.matrixWorld).toArray() as V3;
     useGame.setState({ hovered: `${profile.name} · 누적 ${hits} / ${CHARACTER_BAT_HITS}대 (배트 기준)` });
   }

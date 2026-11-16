@@ -1,3 +1,4 @@
+import { WORLD } from '../data/studios';
 import { GRAPHICS } from './graphics';
 import { Meteor } from './Meteor';
 import { NuclearBlast } from './NuclearBlast';
@@ -9,6 +10,7 @@ import { useGame } from '../game/store';
 import { WEAPONS } from '../weapons/config';
 import { aim, tickAttacks } from '../physics/attacks';
 
+const STATION_OUTLINE = new Float32Array([-WORLD.width/2,-WORLD.depth/2,0,WORLD.width/2,-WORLD.depth/2,0,WORLD.width/2,WORLD.depth/2,0,-WORLD.width/2,WORLD.depth/2,0]);
 const UP = new Vector3(0, 1, 0);
 function effectColor(effect: Effect) {
   if (effect.type === 'fuse') return '#e8a86b';
@@ -207,7 +209,7 @@ function LaserBeam() {
   </>;
 }
 export function Effects() {
-  const effects = useGame(s => s.effects), cursor = useRef<Group>(null);
+  const effects = useGame(s => s.effects), cursor = useRef<Group>(null), range = useRef<Group>(null);
   const weapon = useGame(s => s.weapon);
   const lastCleanup = useRef(0);
   useFrame(({ camera }) => {
@@ -215,8 +217,14 @@ export function Effects() {
     tickAttacks();
     if (cursor.current) {
       const normal = new Vector3(...aim.normal).normalize();
-      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = !!aim.target && !useGame.getState().meteor;
+      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = aim.active && !!aim.target && !useGame.getState().meteor && !useGame.getState().nuke;
       cursor.current.quaternion.slerp(new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), normal), .35);
+    }
+    if (range.current) {
+      const state = useGame.getState();
+      range.current.visible = state.ready && (weapon === 'nuke' || aim.active) && weapon !== 'bat' && !state.meteor && !state.nuke;
+      if (weapon === 'nuke') range.current.position.set(0, .18, WORLD.centerZ);
+      else range.current.position.set(aim.point[0], aim.point[1] + .035, aim.point[2]);
     }
     if (performance.now() - lastCleanup.current > 1000) {
       lastCleanup.current = performance.now(); const state = useGame.getState(), now = performance.now();
@@ -230,6 +238,15 @@ export function Effects() {
     <group ref={cursor}>
       <mesh><ringGeometry args={[.17, .187, 32]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>
       <mesh><circleGeometry args={[.035, 16]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>
+    </group>
+    <group ref={range} rotation={[-Math.PI / 2, 0, 0]} visible={false} name="weapon-damage-range">
+      {weapon === 'nuke' ? <>
+        <mesh><planeGeometry args={[WORLD.width, WORLD.depth]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.06} depthTest={false} depthWrite={false} side={2}/></mesh>
+        <lineLoop><bufferGeometry><bufferAttribute attach="attributes-position" args={[STATION_OUTLINE, 3]}/></bufferGeometry><lineBasicMaterial color={WEAPONS[weapon].color} depthTest={false}/></lineLoop>
+      </> : <group scale={WEAPONS[weapon].radius}>
+        <mesh><ringGeometry args={[.985, 1, 64]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.7} depthTest={false} depthWrite={false} side={2}/></mesh>
+        <mesh><circleGeometry args={[1, 64]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.05} depthTest={false} depthWrite={false} side={2}/></mesh>
+      </group>}
     </group>
     <BatSwing effects={effects} />
     <LaserBeam />

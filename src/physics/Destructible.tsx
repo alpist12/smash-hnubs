@@ -159,7 +159,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
 
   function onAim(e: ThreeEvent<PointerEvent>) {
     if (!shown.current) return;
-    e.stopPropagation(); aim.point = e.point.toArray() as V3; aim.target = item.id;
+    e.stopPropagation(); aim.active = true; aim.point = e.point.toArray() as V3; aim.target = item.id;
     // 조준 원이 맞은 면(벽이면 세로면)에 붙도록 면의 방향을 기억한다.
     if (e.face) {
       const normal = e.face.normal.clone();
