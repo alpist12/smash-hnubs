@@ -66,9 +66,6 @@ export function Hud() {
   }, [help]);
   const actions = [
     { icon: 'ranking', name: '온라인 랭킹', short: '랭킹', action: () => setRanking(true) },
-    { icon: 'reset', name: '시점 초기화', short: '시점', action: () => camera('home') },
-    { icon: 'fit', name: '전체 방송국 보기', short: '전체', action: () => camera('top') },
-    { icon: 'camera', name: '스크린 쪽 보기', short: '스크린', action: () => camera('photo') },
     { icon: 'restore', name: '맵 복구', short: '전부 복구', action: restore },
     { icon: sound ? 'sound' : 'mute', name: sound ? '사운드 끄기' : '사운드 켜기', short: '사운드', pressed: sound, action: () => useGame.setState({ sound: !sound }) },
   ];
