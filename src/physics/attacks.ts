@@ -14,7 +14,6 @@ const lastShots = new Map<WeaponId, number>();
 let shotRound = -1;
 let nukeTargets: [string, Target][] = [];
 let nukeRound = -1;
-let bombs: { at: number; point: V3; round: number }[] = [];
 let missiles: { at: number; point: V3; round: number; target: string }[] = [];
 export const nextEffectId = () => ++serial;
 export function falloff(distance: number, radius: number) { return Math.max(0, 1 - distance / radius); }
@@ -32,7 +31,7 @@ function detonate(weapon: WeaponId, point: V3, selected: string) {
   }
   state.addEffect({ id: nextEffectId(), type: weapon, point, born: performance.now(), radius: config.radius });
   aim.kick = weapon === 'ascent' ? 12 : weapon === 'meteor' ? 10 : weapon === 'draco' ? 4 : 0;
-  aim.shake = weapon === 'ascent' ? .8 : weapon === 'draco' ? .3 : weapon === 'meteor' ? .85 : weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
+  aim.shake = weapon === 'ascent' ? .8 : weapon === 'draco' ? .3 : weapon === 'meteor' ? .85 : weapon === 'missile' ? .17 : .035;
   if (state.sound) playImpact(weapon);
 }
 export function attack(point: V3, selected = '') {
@@ -58,9 +57,6 @@ export function attack(point: V3, selected = '') {
   } else if (state.weapon === 'meteor') {
     useGame.setState({ meteor: { id: nextEffectId(), point: [...point], born: now * 1000, impacted: false } });
     if (state.sound) playImpact('meteor-fall');
-  } else if (state.weapon === 'bomb') {
-    bombs.push({ at: now + .8, point: [...point], round: state.round });
-    state.addEffect({ id: nextEffectId(), type: 'fuse', point, born: performance.now(), radius: .12 });
   } else if (state.weapon === 'missile') {
     // 카메라 오른쪽 아래에서 발사해 포물선을 그리며 날아간다.
     const target = new Vector3(...point), camera = new Vector3(...aim.camera);
@@ -105,11 +101,6 @@ export function tickAttacks() {
     }
   }
   if (nuclear && !nukeTargets.length && now * 1000 >= nuclear.born + (WEAPONS.nuke.charge + WEAPONS.nuke.aftermath) * 1000) useGame.setState({ nuke: null });
-  bombs = bombs.filter(bomb => {
-    if (bomb.round !== state.round) return false;
-    if (now < bomb.at) return true;
-    detonate('bomb', bomb.point, ''); return false;
-  });
   missiles = missiles.filter(missile => {
     if (missile.round !== state.round) return false;
     if (now < missile.at) return true;
@@ -124,4 +115,4 @@ export function tickAttacks() {
   if (strike && now * 1000 >= strike.born + (WEAPONS.meteor.flight + WEAPONS.meteor.aftermath) * 1000) useGame.setState({ meteor: null });
   if (aim.holding && state.weapon === 'laser') attack(aim.point, aim.target);
 }
-export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, meteor: null, nuke: null }); bombs = []; missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; aim.kick = 0; }
+export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, meteor: null, nuke: null }); missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; aim.kick = 0; }

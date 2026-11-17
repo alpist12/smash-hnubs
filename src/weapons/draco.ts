@@ -1,1 +1,1 @@
-export default {id:'draco',label:'레쿠쟈 · 용성군',short:'용성군',key:'8',power:440,impulse:22,radius:3.1,spread:5.8,count:8,interval:.4,release:10.4,firstImpact:12.3,duration:18,cooldown:19,color:'#bd9ef3',description:'레쿠쟈 소환 · 우주 강림 · 8발 대형 유성우가 지정 구역에 낙하',knockback:6,lift:.65} as const;
+export default {id:'draco',label:'레쿠쟈 · 용성군',short:'용성군',key:'6',power:440,impulse:22,radius:3.1,spread:5.8,count:8,interval:.4,release:10.4,firstImpact:12.3,duration:18,cooldown:19,color:'#bd9ef3',description:'레쿠쟈 소환 · 우주 강림 · 8발 대형 유성우가 지정 구역에 낙하',knockback:6,lift:.65} as const;

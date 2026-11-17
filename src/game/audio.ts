@@ -141,14 +141,15 @@ export function playImpact(type: string) {
         noise(c, t + 10.4, .9, 'highpass', 600, 6000, .45, .02, .8, wet), tone(c, t + 10.4, 1.2, 'sine', 300, 1800, .18, .02, wet),
         ...whoosh(c, t + 11.2, 1.1, .5),
       );
-      else rayquazaNodes.push(...riser(c, t + 9.9, 1.4, 90, 520), ...roar(c, t + 11.15, .9), ...riser(c, t + 11.6, .85, 200, 1600));
+      else rayquazaNodes.push(tone(c, t + 8.8, 2.8, 'sawtooth', 55, 110, .06, 1.2, wet), ...riser(c, t + 9.9, 1.4, 90, 520), ...roar(c, t + 11.15, .9), ...riser(c, t + 11.6, .85, 200, 1600));
       break;
     }
     case 'draco':
       boom(c, t, .75); break;
     case 'ascent': {
       const { wet } = cinema(c);
-      boom(c, t, 1.6); tone(c, t, 2, 'sine', 1800, 900, .12, .005, wet); tone(c, t, 2, 'sine', 2700, 1350, .07, .005, wet); break;
+      boom(c, t, 1.6); boom(c, t + .45, .9); braam(c, t + .02, 3.2, 36.7);
+      tone(c, t, 2.4, 'sine', 1800, 900, .12, .005, wet); tone(c, t, 2.4, 'sine', 2700, 1350, .07, .005, wet); break;
     }
     case 'nuke-arm': {
       stopNuclear(); const { wet } = cinema(c);
@@ -170,28 +171,20 @@ export function playImpact(type: string) {
       meteorFallNodes = [wind, ...braam(c, t, 2.4, 46), ...riser(c, t + .4, f - .4, 60, 360), tone(c, t, f, 'sine', 35, 210, .25, f * .7)];
       break;
     }
-    case 'bomb': case 'missile': // 콰광: 저역 폭발 + 길게 무너지는 잔향
+    case 'missile': // 콰광: 저역 폭발 + 길게 무너지는 잔향
       noise(c, t, 1.6, 'lowpass', 1400, 50, 1, .004);
       tone(c, t, .9, 'sine', 95, 28, 1, .003);
       noise(c, t, .12, 'highpass', 3000, 1500, .5, .001);
-      crackle(c, t + .05, 1.2, type === 'bomb' ? 60 : 45, 1800, .35);
+      crackle(c, t + .05, 1.2, 45, 1800, .35);
       break;
     case 'laser': // 지잉 레이저
       tone(c, t, .14, 'sawtooth', vary(1600, .05), 380, .22, .002);
       tone(c, t, .14, 'square', vary(800, .05), 190, .08, .002);
       noise(c, t, .1, 'highpass', 5000, 3000, .12, .002);
       break;
-    case 'sonic': // 우우웅 음파
-      tone(c, t, .7, 'sine', 140, 48, .7, .02);
-      tone(c, t, .7, 'triangle', 280, 96, .25, .02);
-      noise(c, t, .6, 'bandpass', 600, 150, .35, .03, 1.5);
-      break;
     case 'launch': // 슈우욱 미사일 발사
       noise(c, t, .7, 'bandpass', 500, 2600, .55, .03, 1.2);
       tone(c, t, .5, 'sawtooth', 140, 420, .08, .02);
-      break;
-    case 'fuse': // 치익 도화선
-      noise(c, t, .75, 'highpass', 4500, 6000, .18, .02);
       break;
   }
 }

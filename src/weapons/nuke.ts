@@ -1,1 +1,1 @@
-export default { id: 'nuke', label: '핵폭탄', short: '핵폭탄', key: '7', power: 1_000_000, impulse: 48, radius: 100, cooldown: 15, color: '#eac66b', description: '3초 후 방송국 전체 파괴 · 이 판은 랭킹 제외', knockback: 9, lift: .8, charge: 3, aftermath: 8 } as const;
+export default { id: 'nuke', label: '핵폭탄', short: '핵폭탄', key: '5', power: 1_000_000, impulse: 48, radius: 100, cooldown: 15, color: '#eac66b', description: '3초 후 방송국 전체 파괴 · 이 판은 랭킹 제외', knockback: 9, lift: .8, charge: 3, aftermath: 8 } as const;

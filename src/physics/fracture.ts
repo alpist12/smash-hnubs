@@ -140,10 +140,10 @@ export function expandWallSelection(pieces: Part[], selected: number[], removed:
   return pieces.flatMap((part, i) => !gone.has(i) && (ids.has(i) || !!part.fractureGroup && groups.has(part.fractureGroup)) ? [i] : []);
 }
 
-// First weaken the wall; only then open holes. The last hit releases the whole section.
+// Every hit opens the hole a little further. The last hit releases the whole section.
 export function wallFractureCount(damage: number, threshold: number, pieceCount: number) {
-  const progress = Math.max(0, Math.min(1, (damage / threshold - .4) / .6));
-  return Math.floor(Math.floor(pieceCount * .7) * progress);
+  const progress = Math.max(0, Math.min(1, damage / threshold));
+  return Math.ceil(Math.floor(pieceCount * .7) * progress);
 }
 
 /** 기둥 조각의 꼭짓점 (부품 로컬 좌표, 회전 전). 볼록 충돌체에 쓴다. */

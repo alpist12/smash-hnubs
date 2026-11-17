@@ -14,7 +14,6 @@ import { aim, tickAttacks } from '../physics/attacks';
 const STATION_OUTLINE = new Float32Array([-WORLD.width/2,-WORLD.depth/2,0,WORLD.width/2,-WORLD.depth/2,0,WORLD.width/2,WORLD.depth/2,0,-WORLD.width/2,WORLD.depth/2,0]);
 const UP = new Vector3(0, 1, 0);
 function effectColor(effect: Effect) {
-  if (effect.type === 'fuse') return '#e8a86b';
   if (effect.type === 'rocket') return '#ff7a3d';
   if (effect.type === 'shatter' || effect.type === 'dust') return effect.colors?.[0] ?? '#9a9a90';
   return WEAPONS[effect.type].color;
@@ -96,10 +95,10 @@ function Dust({ effect }: { effect: Effect }) {
 function Impact({ effect }: { effect: Effect }) {
   const camera = useThree(state => state.camera);
   const group = useRef<Group>(null), ring = useRef<Mesh>(null), cloud = useRef<Group>(null), flash = useRef<Mesh>(null), sparks = useRef<Group>(null), burst = useRef<Group>(null);
-  const color = effectColor(effect), big = effect.type === 'bomb' || effect.type === 'missile' || effect.type === 'meteor' || effect.type === 'draco' || effect.type === 'ascent';
+  const color = effectColor(effect), big = effect.type === 'missile' || effect.type === 'meteor' || effect.type === 'draco' || effect.type === 'ascent';
   useFrame(() => {
     const elapsed = (performance.now() - effect.born) / 1000;
-    const duration = effect.type === 'meteor' ? 1.7 : effect.type === 'fuse' ? .8 : effect.type === 'laser' ? .35 : .8;
+    const duration = effect.type === 'meteor' ? 1.7 : effect.type === 'laser' ? .35 : .8;
     if (!group.current) return;
     group.current.visible = elapsed < duration;
     if (sparks.current) sparks.current.children.forEach((spark, i) => {
@@ -113,7 +112,6 @@ function Impact({ effect }: { effect: Effect }) {
       burst.current.quaternion.copy(camera.quaternion);
       burst.current.children.forEach((line, i) => { ((line as Mesh).material as MeshBasicMaterial).opacity = (1 - bt) * .9; line.position.set(Math.cos(i * Math.PI / 4) * .14, Math.sin(i * Math.PI / 4) * .14, 0); });
     }
-    if (effect.type === 'fuse') { group.current.scale.setScalar(1 + Math.sin(elapsed * 30) * .1); return; }
     const t = elapsed / duration;
     if (ring.current) { ring.current.scale.setScalar(Math.max(.05, t * effect.radius)); (ring.current.material as MeshBasicMaterial).opacity = (1 - t) * .75; }
     if (flash.current) { const ft = Math.min(1, elapsed / .35); flash.current.scale.setScalar(Math.max(.01, effect.radius * .55 * Math.sqrt(ft))); (flash.current.material as MeshBasicMaterial).opacity = Math.max(0, 1 - ft) * .85; }
@@ -124,16 +122,13 @@ function Impact({ effect }: { effect: Effect }) {
     });
   });
   return <group ref={group} position={effect.point}>
-    {effect.type === 'fuse' ? <group position={[0, .12, 0]}>
-      <mesh castShadow><sphereGeometry args={[.12, 12, 8]} /><meshStandardMaterial color="#30363a" /></mesh>
-      <mesh position={[.04, .15, 0]}><sphereGeometry args={[.027, 6, 6]} /><meshBasicMaterial color="#f6b15d" /></mesh>
-    </group> : <>
+    <>
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, .035, 0]}><ringGeometry args={[.93, 1, 48]} /><meshBasicMaterial color={color} transparent opacity={.8} depthWrite={false} side={2} /></mesh>
       {big && <mesh ref={flash}><sphereGeometry args={[1, 20, 14]} /><meshBasicMaterial color="#ffd08a" transparent opacity={.8} depthWrite={false} /></mesh>}
-      <group ref={cloud}>{Array.from({ length: big || effect.type === 'sonic' ? 18 : 6 }, (_, i) => <mesh key={i}><icosahedronGeometry args={[1, 0]} /><meshBasicMaterial color={i % 3 ? '#c1b8a3' : color} /></mesh>)}</group>
+      <group ref={cloud}>{Array.from({ length: big ? 18 : 6 }, (_, i) => <mesh key={i}><icosahedronGeometry args={[1, 0]} /><meshBasicMaterial color={i % 3 ? '#c1b8a3' : color} /></mesh>)}</group>
       {effect.type === 'laser' && <group ref={sparks}>{Array.from({ length: 7 }, (_, i) => <mesh key={i}><boxGeometry args={[.008, .008, .07]} /><meshBasicMaterial color={i % 2 ? '#ffd29a' : '#ff8a5c'} toneMapped={false} /></mesh>)}</group>}
       {effect.type === 'bat' && <group ref={burst}>{Array.from({ length: 8 }, (_, i) => <mesh key={i} rotation={[0, 0, i * Math.PI / 4]}><boxGeometry args={[.22, .022, .01]} /><meshBasicMaterial color="#fff6e0" transparent opacity={.9} depthWrite={false} /></mesh>)}</group>}
-    </>}
+    </>
   </group>;
 }
 function EffectView({ effect }: { effect: Effect }) {

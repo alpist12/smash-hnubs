@@ -84,11 +84,9 @@ test('weapons use distinct radii, decreasing explosion force and bounded debris'
     assert.equal(falloff(weapon.radius * 2, weapon.radius), 0);
     assert.ok(weapon.power > 0 && weapon.cooldown > 0);
   }
-  assert.ok(WEAPONS.sonic.radius > WEAPONS.bomb.radius);
-  assert.ok(WEAPONS.bomb.radius > WEAPONS.bat.radius);
   assert.ok(WEAPONS.bat.radius > WEAPONS.laser.radius);
-  assert.ok(WEAPONS.missile.radius > WEAPONS.bat.radius && WEAPONS.missile.radius < WEAPONS.bomb.radius);
-  assert.deepEqual(Object.values(WEAPONS).map(w => w.key), ['1', '2', '3', '4', '5', '6', '7', '8', '9']);
+  assert.ok(WEAPONS.missile.radius > WEAPONS.bat.radius && WEAPONS.missile.radius < WEAPONS.meteor.radius);
+  assert.deepEqual(Object.values(WEAPONS).map(w => w.key), ['1', '2', '3', '4', '5', '6', '7']);
   useGame.getState().reset();
   useGame.getState().selectGraphics('high');
   for (let i = 0; i < 150; i++) useGame.getState().addEffect({ id: i, born: 0, type: 'bat', radius: 1, point: [0, 0, 0] });
@@ -118,7 +116,7 @@ test('bat damages only its selected target repeatedly; explosions still affect n
     for (let swing = 0; swing < 3; swing++) { now += 1000; attack([0, 0, 0], 'selected'); }
     assert.deepEqual(hits, Array(4).fill('selected'));
     hits.splice(1);
-    useGame.setState({ weapon: 'bomb' });
+    useGame.setState({ weapon: 'missile' });
     now += 2000; attack([0, 0, 0]); now += 1000; tickAttacks();
     assert.deepEqual(hits, ['selected', 'selected', 'neighbour']);
     hits.length = 0; now += 1000; useGame.setState({ weapon: 'bat' }); aim.last = -10;
