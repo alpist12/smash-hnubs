@@ -15,7 +15,7 @@ test('ranking dialog exposes public submission and automatic nuclear exclusion; 
  const html=renderToStaticMarkup(createElement(Leaderboard,{onClose:()=>{}}));
  assert.match(html,/role="dialog"/);assert.match(html,/공개 닉네임/);assert.doesNotMatch(html,/랭킹 종류/);assert.match(html,/자동 제외/);assert.match(html,/핵폭탄 사용/);assert.match(html,/disabled/);
  initial.nuke={id:1,born:performance.now(),point:[0,0,0],impacted:false};
- assert.match(renderToStaticMarkup(createElement(NuclearCinematic)),/핵폭탄 투하 경고/);
+ assert.doesNotMatch(renderToStaticMarkup(createElement(NuclearCinematic)),/투하 경고|초 후 충격/);
  initial.nuke={id:1,born:performance.now()-3000,point:[0,0,0],impacted:true};
  assert.match(renderToStaticMarkup(createElement(NuclearCinematic)),/방송국 전역 폭발/);
  initial.usedNuke=true;const excluded=renderToStaticMarkup(createElement(Leaderboard,{onClose:()=>{}}));assert.match(excluded,/랭킹 제외/);assert.match(excluded,/disabled/);
