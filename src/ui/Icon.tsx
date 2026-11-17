@@ -1,5 +1,7 @@
 export function Icon({ name, size = 22 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
+    draco: <><path d="m4 3 7 7m-2-8 7 7M2 8l6 6m7-4 5 3 1 5-4 3-5-2-2-4Z"/><path d="m13 14 3-1 2 3-2 2-3-1Z"/></>,
+    ascent: <><path d="M5 21c-4-8 8-8 5-13C7 4 11 1 17 3l4 4-5-1-2 3 3 2c6 6-8 5-7 10"/><path d="m4 8 3-3m-4 8 4-2m8 8 5-4"/></>,
     ranking: <><path d="M8 3h8v6a4 4 0 0 1-8 0ZM8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 13v5m-4 3h8m-7-3h6v3"/></>,
     bat: <><path d="m5 19 6-6m-7 5 2 2m4-8 6-8a2.1 2.1 0 0 1 3 3l-8 6Z"/><path d="m17 15 3 1m-6 1 1 3"/></>,
     nuke: <><circle cx="12" cy="12" r="2"/><path d="M10 8 7 3a10 10 0 0 1 10 0l-3 5M8 12H2a10 10 0 0 0 5 9l3-5m4 0 3 5a10 10 0 0 0 5-9h-6"/></>,

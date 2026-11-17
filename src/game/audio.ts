@@ -7,6 +7,8 @@ import type { Finish } from '../data/types';
  */
 let ctx: AudioContext | undefined, master: GainNode | undefined, noiseBuffer: AudioBuffer | undefined;
 let recent: number[] = [];
+let rayquazaNodes:AudioScheduledSourceNode[]=[];
+export function stopRayquaza(){for(const node of rayquazaNodes){try{node.stop();}catch{/* 이미 끝난 노드 */}}rayquazaNodes=[];}
 let nuclearNodes: AudioScheduledSourceNode[] = [];
 export function stopNuclear() { for (const node of nuclearNodes) { try { node.stop(); } catch { /* 이미 끝난 노드 */ } } nuclearNodes = []; }
 let meteorFallNodes: AudioScheduledSourceNode[] = [];
@@ -56,13 +58,22 @@ const on = () => { const c = audioContext(); return c && master && budget() ? c 
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {
-  const c = type === 'meteor' || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
+  const c = ['meteor','draco','ascent','rayquaza-cast'].includes(type) || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
   switch (type) {
     case 'bat': // 딱! 나무 배트 타격 + 묵직한 쿵
       noise(c, t, .06, 'bandpass', vary(2400), 900, .9, .001, 1.4);
       tone(c, t, .16, 'triangle', vary(190), 70, .55);
       noise(c, t + .01, .25, 'lowpass', 900, 120, .35, .004);
       break;
+    case 'rayquaza-cast':
+      stopRayquaza();
+      rayquazaNodes.push(tone(c,t,2.7,'sine',90,420,.23,.4),tone(c,t+.1,2.5,'triangle',180,840,.07,.5));
+      {const wind=noise(c,t,3.5,'bandpass',180,1700,.23,1.8);wind.loop=true;rayquazaNodes.push(wind);}
+      break;
+    case 'draco':
+      tone(c,t,.8,'sine',140,35,.5,.004);noise(c,t,.7,'lowpass',1500,100,.5,.005);break;
+    case 'ascent':
+      tone(c,t,2,'sine',85,22,.8,.004);noise(c,t,1.8,'lowpass',2400,80,.7,.005);break;
     case 'nuke-arm':
       stopNuclear();
       for (let i = 0; i < 3; i++) nuclearNodes.push(tone(c, t + i * .9, .24, 'sine', 880, 660, .3, .01));

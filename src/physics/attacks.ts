@@ -1,8 +1,9 @@
+import { dracoPoint } from '../data/rayquaza';
 import { beginOnlineRun } from '../game/leaderboard';
 import { Vector3 } from 'three';
 import { WEAPONS, type WeaponId } from '../weapons/config';
 import { useGame } from '../game/store';
-import { audioContext, playImpact, stopMeteorFall, stopNuclear } from '../game/audio';
+import { audioContext, playImpact, stopMeteorFall, stopNuclear, stopRayquaza } from '../game/audio';
 import type { V3 } from '../data/types';
 
 export interface Target { point: () => Vector3; facing?: () => number; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean, weapon?: WeaponId) => void }
@@ -30,24 +31,27 @@ function detonate(weapon: WeaponId, point: V3, selected: string) {
     target.hit(config.power * strength, dir.multiplyScalar(config.impulse * strength).toArray() as V3, point, config.knockback * Math.max(.35, strength), false, weapon);
   }
   state.addEffect({ id: nextEffectId(), type: weapon, point, born: performance.now(), radius: config.radius });
-  aim.shake = weapon === 'meteor' ? .55 : weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
+  aim.shake = weapon === 'ascent' ? .5 : weapon === 'draco' ? .18 : weapon === 'meteor' ? .55 : weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
   if (state.sound) playImpact(weapon);
 }
 export function attack(point: V3, selected = '') {
   const state = useGame.getState(), now = performance.now() / 1000;
   if (!state.ready) return;
   if (shotRound !== state.round) { lastShots.clear(); shotRound = state.round; }
-  if (state.nuke || (state.weapon === 'meteor' || state.weapon === 'nuke') && state.meteor) return;
+  if (state.rayquaza || state.nuke || ((state.weapon === 'draco' || state.weapon === 'ascent') && state.meteor) || (state.weapon === 'meteor' || state.weapon === 'nuke') && state.meteor) return;
   const wait = WEAPONS[state.weapon].cooldown - (now - (lastShots.get(state.weapon) ?? -Infinity));
   if (wait > 0) {
-    if (state.weapon === 'meteor' || state.weapon === 'nuke') useGame.setState({ hint: `${WEAPONS[state.weapon].short} 재사용까지 ${wait.toFixed(1)}초` });
+    if (['meteor','nuke','draco','ascent'].includes(state.weapon)) useGame.setState({ hint: `${WEAPONS[state.weapon].short} 재사용까지 ${wait.toFixed(1)}초` });
     return;
   }
   lastShots.set(state.weapon, now);
   aim.last = now;
   beginOnlineRun(state.round, state.weapon === 'nuke');
   if (state.sound) audioContext(); // 지연 폭발도 모바일 사용자 제스처 안에서 오디오를 연다.
-  if (state.weapon === 'nuke') {
+  if (state.weapon === 'draco' || state.weapon === 'ascent') {
+    useGame.setState({rayquaza:{id:nextEffectId(),point:[...point],born:now*1000,skill:state.weapon,hits:0}});
+    if(state.sound)playImpact('rayquaza-cast');
+  } else if (state.weapon === 'nuke') {
     useGame.setState({ nuke: { id: nextEffectId(), point: [0, 0, -5.75], born: now * 1000, impacted: false }, usedNuke: true, hint: '' });
     if (state.sound) playImpact('nuke-arm');
   } else if (state.weapon === 'meteor') {
@@ -68,6 +72,18 @@ export function attack(point: V3, selected = '') {
 }
 export function tickAttacks() {
   const now = performance.now() / 1000, state = useGame.getState();
+  const dragon=state.rayquaza;
+  if(dragon){
+    const age=now-dragon.born/1000,config=WEAPONS[dragon.skill];let hits=dragon.hits;
+    if(dragon.skill==='draco'){
+      const due=Math.min(WEAPONS.draco.count,Math.max(0,Math.floor((age-WEAPONS.draco.firstImpact)/WEAPONS.draco.interval+1+1e-7)));
+      const end=Math.min(due,hits+2);
+      while(hits<end){detonate('draco',dracoPoint(dragon.point,hits),'');hits++;}
+    }else if(!hits&&age>=WEAPONS.ascent.impact){detonate('ascent',dragon.point,'');hits=1;}
+    const total=dragon.skill==='draco'?WEAPONS.draco.count:1;
+    if(hits!==dragon.hits)useGame.setState({rayquaza:{...dragon,hits}});
+    if(age>=config.duration&&hits===total)useGame.setState({rayquaza:null});
+  }
   const nuclear = state.nuke;
   if (nukeRound !== state.round) { nukeTargets = []; nukeRound = state.round; }
   if (nuclear && !nuclear.impacted && now * 1000 >= nuclear.born + WEAPONS.nuke.charge * 1000) {
@@ -107,4 +123,4 @@ export function tickAttacks() {
   if (strike && now * 1000 >= strike.born + (WEAPONS.meteor.flight + WEAPONS.meteor.aftermath) * 1000) useGame.setState({ meteor: null });
   if (aim.holding && state.weapon === 'laser') attack(aim.point, aim.target);
 }
-export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); useGame.setState({ meteor: null, nuke: null }); bombs = []; missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; }
+export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, meteor: null, nuke: null }); bombs = []; missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; }

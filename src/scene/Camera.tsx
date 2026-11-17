@@ -1,3 +1,4 @@
+import {rayquazaFrame} from '../data/rayquaza';
 import { useEffect, useRef } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -68,7 +69,8 @@ export function CameraRig() {
     if (!controls.current) return;
     camera.position.sub(previousShake.current); previousShake.current.set(0, 0, 0);
     const strike = useGame.getState().meteor, nuclear = useGame.getState().nuke;
-    const activeStrike = strike || nuclear;
+    const dragon = useGame.getState().rayquaza;
+    const activeStrike = strike || nuclear || dragon;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!reduced && (activeStrike || cinematic.current)) {
       const c = controls.current;
@@ -76,7 +78,10 @@ export function CameraRig() {
       if (activeStrike && !cinematic.current) cinematic.current = { position: camera.position.clone(), target: c.target.clone() };
       const saved = cinematic.current!;
       let desired = saved.position, target = saved.target;
-      if (nuclear) {
+      if (dragon) {
+        const frame=rayquazaFrame((performance.now()-dragon.born)/1000,dragon.skill,dragon.point,size.width<size.height);
+        desired=new Vector3(...frame.camera);target=new Vector3(...frame.target);
+      } else if (nuclear) {
         const frame = nuclearFrame((performance.now()-nuclear.born)/1000, nuclear.point, size.width<size.height);
         desired = new Vector3(...frame.camera); target = new Vector3(...frame.target);
       } else if (strike) {

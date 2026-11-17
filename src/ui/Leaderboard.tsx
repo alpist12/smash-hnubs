@@ -4,7 +4,7 @@ import {loadRanking,submitRanking,type RankingEntry} from '../game/leaderboard';
 import {Icon} from './Icon';
 export function Leaderboard({onClose}:{onClose:()=>void}){
  const round=useGame(s=>s.round),score=useGame(s=>s.score),usedNuke=useGame(s=>s.usedNuke);
- const busy=useGame(s=>!!s.nuke||!!s.meteor);
+ const busy=useGame(s=>!!s.nuke||!!s.meteor||!!s.rayquaza);
  const [rows,setRows]=useState<RankingEntry[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
  const [nickname,setNickname]=useState(()=>{try{return localStorage.getItem('hnubs:ranking-name')??'';}catch{return '';}});
  const [sending,setSending]=useState(false),[saved,setSaved]=useState(false),[notice,setNotice]=useState(''),[refresh,setRefresh]=useState(0);

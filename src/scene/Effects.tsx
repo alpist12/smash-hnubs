@@ -1,3 +1,4 @@
+import {Rayquaza} from './Rayquaza';
 import { WORLD } from '../data/studios';
 import { GRAPHICS } from './graphics';
 import { Meteor } from './Meteor';
@@ -7,7 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { AdditiveBlending, Group, Mesh, MeshBasicMaterial, PointLight, Quaternion, Vector3 } from 'three';
 import type { Effect, V3 } from '../data/types';
 import { useGame } from '../game/store';
-import { WEAPONS } from '../weapons/config';
+import { WEAPONS, damageGuideRadius } from '../weapons/config';
 import { aim, tickAttacks } from '../physics/attacks';
 
 const STATION_OUTLINE = new Float32Array([-WORLD.width/2,-WORLD.depth/2,0,WORLD.width/2,-WORLD.depth/2,0,WORLD.width/2,WORLD.depth/2,0,-WORLD.width/2,WORLD.depth/2,0]);
@@ -95,7 +96,7 @@ function Dust({ effect }: { effect: Effect }) {
 function Impact({ effect }: { effect: Effect }) {
   const camera = useThree(state => state.camera);
   const group = useRef<Group>(null), ring = useRef<Mesh>(null), cloud = useRef<Group>(null), flash = useRef<Mesh>(null), sparks = useRef<Group>(null), burst = useRef<Group>(null);
-  const color = effectColor(effect), big = effect.type === 'bomb' || effect.type === 'missile' || effect.type === 'meteor';
+  const color = effectColor(effect), big = effect.type === 'bomb' || effect.type === 'missile' || effect.type === 'meteor' || effect.type === 'draco' || effect.type === 'ascent';
   useFrame(() => {
     const elapsed = (performance.now() - effect.born) / 1000;
     const duration = effect.type === 'meteor' ? 1.7 : effect.type === 'fuse' ? .8 : effect.type === 'laser' ? .35 : .8;
@@ -217,12 +218,12 @@ export function Effects() {
     tickAttacks();
     if (cursor.current) {
       const normal = new Vector3(...aim.normal).normalize();
-      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = aim.active && !!aim.target && !useGame.getState().meteor && !useGame.getState().nuke;
+      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = aim.active && !!aim.target && !useGame.getState().meteor && !useGame.getState().nuke && !useGame.getState().rayquaza;
       cursor.current.quaternion.slerp(new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), normal), .35);
     }
     if (range.current) {
       const state = useGame.getState();
-      range.current.visible = state.ready && (weapon === 'nuke' || aim.active) && weapon !== 'bat' && !state.meteor && !state.nuke;
+      range.current.visible = state.ready && (weapon === 'nuke' || aim.active) && weapon !== 'bat' && !state.meteor && !state.nuke && !state.rayquaza;
       if (weapon === 'nuke') range.current.position.set(0, .18, WORLD.centerZ);
       else range.current.position.set(aim.point[0], aim.point[1] + .035, aim.point[2]);
     }
@@ -243,7 +244,7 @@ export function Effects() {
       {weapon === 'nuke' ? <>
         <mesh><planeGeometry args={[WORLD.width, WORLD.depth]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.06} depthTest={false} depthWrite={false} side={2}/></mesh>
         <lineLoop><bufferGeometry><bufferAttribute attach="attributes-position" args={[STATION_OUTLINE, 3]}/></bufferGeometry><lineBasicMaterial color={WEAPONS[weapon].color} depthTest={false}/></lineLoop>
-      </> : <group scale={WEAPONS[weapon].radius}>
+      </> : <group scale={damageGuideRadius(weapon)}>
         <mesh><ringGeometry args={[.985, 1, 64]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.7} depthTest={false} depthWrite={false} side={2}/></mesh>
         <mesh><circleGeometry args={[1, 64]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.05} depthTest={false} depthWrite={false} side={2}/></mesh>
       </group>}
@@ -252,5 +253,6 @@ export function Effects() {
     <LaserBeam />
     <Meteor />
     <NuclearBlast />
+    <Rayquaza />
   </>;
 }
