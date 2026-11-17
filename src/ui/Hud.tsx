@@ -1,3 +1,4 @@
+import { NuclearRecovery } from './NuclearRecovery';
 import { RankingPreview } from './RankingPreview';
 import { Leaderboard } from './Leaderboard';
 import { QUALITY_LABELS, type GraphicsMode } from '../scene/graphics';
@@ -28,14 +29,14 @@ export function Hud() {
   const destroyed = useGame(s => s.destroyed), ready = useGame(s => s.ready), hovered = useGame(s => s.hovered);
   const cameraMode = useGame(s => s.cameraMode);
   const quality = useGame(s => s.quality), graphicsMode = useGame(s => s.graphicsMode);
-  const sound = useGame(s => s.sound);
+  const sound = useGame(s => s.sound), round = useGame(s => s.round);
   const cinematic = useGame(s => !!s.meteor || !!s.nuke);
   const hint = useGame(s => s.hint), [help, setHelp] = useState(false), [ranking, setRanking] = useState(false), [restoring, setRestoring] = useState(false);
   const closeRanking = useCallback(() => setRanking(false), []);
   const [splashDone, setSplashDone] = useState(false);
   const count = Object.keys(destroyed).length, percent = Math.round(count / TOTAL * 100);
   function camera(mode: 'home' | 'top' | 'photo' | 'technical' | 'announcer' | 'character' | 'yujin') { useGame.setState(s => ({ cameraMode: mode, cameraRequest: s.cameraRequest + 1 })); }
-  function restore() { setRestoring(true); requestAnimationFrame(() => requestAnimationFrame(() => { useGame.getState().reset(); setTimeout(() => setRestoring(false), 250); })); }
+  const restore = useCallback(() => { setRestoring(true); requestAnimationFrame(() => requestAnimationFrame(() => { useGame.getState().reset(); setTimeout(() => setRestoring(false), 250); })); }, []);
   useEffect(() => {
     function key(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.altKey || e.metaKey || e.ctrlKey) return;
@@ -103,6 +104,7 @@ export function Hud() {
     </footer>
     <MeteorCinematic />
     <NuclearCinematic />
+    <NuclearRecovery key={round} onRestore={restore} />
     {hint && <div className="toast" role="status">{hint}</div>}
     <Splash ready={ready} restoring={restoring} onFinished={setSplashDone} />
     <UpdateNotice active={splashDone && ready && !restoring && !help && !ranking} />

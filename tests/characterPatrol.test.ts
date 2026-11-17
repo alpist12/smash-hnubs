@@ -1,3 +1,4 @@
+import {CHARACTERS} from '../src/data/characters';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import RAPIER from '@dimforge/rapier3d-compat';
@@ -28,10 +29,12 @@ test('patrol crosses both real doorways and raised technical floor with the ship
     const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-3.6,0,2.5).setLinearDamping(1.8).enabledRotations(false,false,false).setCcdEnabled(true));
     world.createCollider(RAPIER.ColliderDesc.capsule(.65,.28).setTranslation(0,.94,0).setMass(CHARACTER_MASS).setFriction(.7),body);
     for(let i=0;i<30;i++) world.step();
+    for(const profile of CHARACTERS)for(const destination of profile.wander.stops)assert.ok(findWalkPath(world,body,body.translation(),destination).length>0,`${profile.name}: unreachable personal destination ${JSON.stringify(destination)}`);
     assert.ok(findWalkPath(world,body,body.translation(),{x:.8,z:-7.1}).length>0, 'a route through the main-to-technical door must exist');
     assert.ok(findWalkPath(world,body,{x:.8,z:-7.1},{x:-3.7,z:-13.2}).length>0, 'a route through the technical-to-announcer door must exist');
     let seed = 271828;
-    const wander = new CharacterWander(() => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32));
+    // Cover every doorway independently of intentionally rare character-specific visits.
+    const wander = new CharacterWander(() => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32), {...CHARACTERS[0].wander, roomWeights:[[0,1,1],[1,0,1],[1,1,0]]});
     let technical = false, announcer = false, returned = false;
     for (let i=0;i<14400;i++) {
       wander.step(world,body,world.timestep,i*1000/60,true); world.step();

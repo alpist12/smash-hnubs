@@ -22,7 +22,7 @@ const STAND_UP_RATE = 3.2; // 클수록 빨리 일어난다(약 1초에 거의 �
 export function Character({ profile }: { profile: CharacterProfile }) {
   const ID = profile.id;
   const body = useRef<RapierRigidBody>(null), view = useRef<Group>(null);
-  const wander = useRef(new CharacterWander());
+  const wander = useRef(new CharacterWander(Math.random, profile.wander));
   const combo = useRef(new HitCombo()), flinch = useRef(0);
   const health = useRef(new CharacterHealth()), recoverAt = useRef(0), walkingLocked = useRef(false);
   const [stage, setStage] = useState(-1), [hits, setHits] = useState(0), [gone, setGone] = useState(false), [fallen, setFallen] = useState(false);
