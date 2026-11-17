@@ -50,7 +50,7 @@ export function attack(point: V3, selected = '') {
   if (state.sound) audioContext(); // 지연 폭발도 모바일 사용자 제스처 안에서 오디오를 연다.
   if (state.weapon === 'draco' || state.weapon === 'ascent') {
     useGame.setState({rayquaza:{id:nextEffectId(),point:[...point],born:now*1000,skill:state.weapon,hits:0}});
-    if(state.sound)playImpact('rayquaza-cast');
+    if(state.sound)playImpact(`rayquaza-${state.weapon}`);
   } else if (state.weapon === 'nuke') {
     useGame.setState({ nuke: { id: nextEffectId(), point: [0, 0, -5.75], born: now * 1000, impacted: false }, usedNuke: true, hint: '' });
     if (state.sound) playImpact('nuke-arm');

@@ -58,22 +58,27 @@ const on = () => { const c = audioContext(); return c && master && budget() ? c 
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {
-  const c = ['meteor','draco','ascent','rayquaza-cast'].includes(type) || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
+  const c = ['meteor','draco','ascent'].includes(type) || type.startsWith('rayquaza-') || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
   switch (type) {
     case 'bat': // 딱! 나무 배트 타격 + 묵직한 쿵
       noise(c, t, .06, 'bandpass', vary(2400), 900, .9, .001, 1.4);
       tone(c, t, .16, 'triangle', vary(190), 70, .55);
       noise(c, t + .01, .25, 'lowpass', 900, 120, .35, .004);
       break;
-    case 'rayquaza-cast':
+    case 'rayquaza-draco': case 'rayquaza-ascent': {
       stopRayquaza();
-      rayquazaNodes.push(tone(c,t,2.7,'sine',90,420,.23,.4),tone(c,t+.1,2.5,'triangle',180,840,.07,.5));
-      {const wind=noise(c,t,3.5,'bandpass',180,1700,.23,1.8);wind.loop=true;rayquazaNodes.push(wind);}
+      rayquazaNodes.push(tone(c,t,4,'sine',44,78,.26,.8),tone(c,t,6,'triangle',88,110,.045,1));
+      const entry=noise(c,t+1,3,'bandpass',120,1700,.35,1.4);entry.loop=true;rayquazaNodes.push(entry);
+      for(const at of [3.1,5.3,6.9]){const pass=noise(c,t+at,.75,'bandpass',1800,150,.28,.05);pass.loop=true;rayquazaNodes.push(pass,tone(c,t+at,.65,'sine',160,55,.13,.02));}
+      rayquazaNodes.push(tone(c,t+7.2,1.1,'sawtooth',95,42,.16,.07),noise(c,t+7.2,1,'lowpass',700,90,.28,.07));
+      if(type==='rayquaza-draco')rayquazaNodes.push(tone(c,t+8.8,1.6,'sine',220,950,.2,.8),tone(c,t+8.8,1.6,'triangle',440,1900,.045,.9),noise(c,t+10.4,.7,'highpass',800,4200,.3,.04));
+      else{const dive=noise(c,t+11.6,.85,'bandpass',220,3300,.36,.65);dive.loop=true;rayquazaNodes.push(tone(c,t+9.9,1.4,'sine',90,440,.16,.5),dive);}
       break;
+    }
     case 'draco':
-      tone(c,t,.8,'sine',140,35,.5,.004);noise(c,t,.7,'lowpass',1500,100,.5,.005);break;
+      tone(c,t,1.3,'sine',95,26,.6,.004);noise(c,t,1.2,'lowpass',1800,75,.6,.005).loop=true;break;
     case 'ascent':
-      tone(c,t,2,'sine',85,22,.8,.004);noise(c,t,1.8,'lowpass',2400,80,.7,.005);break;
+      noise(c,t,.07,'highpass',4200,1100,.45,.001);tone(c,t,3.2,'sine',65,20,.8,.004);noise(c,t,2.4,'lowpass',2200,60,.65,.005).loop=true;noise(c,t+.12,1.5,'bandpass',650,120,.3,.05);break;
     case 'nuke-arm':
       stopNuclear();
       for (let i = 0; i < 3; i++) nuclearNodes.push(tone(c, t + i * .9, .24, 'sine', 880, 660, .3, .01));

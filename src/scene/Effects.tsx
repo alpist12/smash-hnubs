@@ -235,7 +235,7 @@ export function Effects() {
     }
   });
   return <>
-    {effects.map(effect => <EffectView key={effect.id} effect={effect} />)}
+    {effects.filter(effect => effect.type !== 'ascent').map(effect => <EffectView key={effect.id} effect={effect} />)}
     <group ref={cursor}>
       <mesh><ringGeometry args={[.17, .187, 32]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>
       <mesh><circleGeometry args={[.035, 16]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>

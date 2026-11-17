@@ -18,7 +18,7 @@ export function CameraRig() {
   const request = useGame(s => s.cameraRequest), mode = useGame(s => s.cameraMode);
   const transition = useRef(1), start = useRef(new Vector3()), goal = useRef(new Vector3());
   const previousShake = useRef(new Vector3());
-  const cinematic = useRef<{ position: Vector3; target: Vector3 } | null>(null);
+  const cinematic = useRef<{ position: Vector3; target: Vector3; fov: number } | null>(null);
   const keys = useRef(new Set<string>()), followCharacter = useRef(false);
   useEffect(() => {
     const typing = (e: KeyboardEvent) => e.target instanceof Element && !!e.target.closest('input, select, textarea, [contenteditable="true"]');
@@ -75,12 +75,13 @@ export function CameraRig() {
     if (!reduced && (activeStrike || cinematic.current)) {
       const c = controls.current;
       c.enabled = false;
-      if (activeStrike && !cinematic.current) cinematic.current = { position: camera.position.clone(), target: c.target.clone() };
+      const entering = !cinematic.current;
+      if (activeStrike && !cinematic.current) cinematic.current = { position: camera.position.clone(), target: c.target.clone(), fov: camera instanceof PerspectiveCamera ? camera.fov : 36 };
       const saved = cinematic.current!;
-      let desired = saved.position, target = saved.target;
+      let desired = saved.position, target = saved.target, fov = saved.fov, freeze = false;
       if (dragon) {
         const frame=rayquazaFrame((performance.now()-dragon.born)/1000,dragon.skill,dragon.point,size.width<size.height);
-        desired=new Vector3(...frame.camera);target=new Vector3(...frame.target);
+        desired=new Vector3(...frame.camera);target=new Vector3(...frame.target);fov=frame.fov;freeze=frame.freeze;
       } else if (nuclear) {
         const frame = nuclearFrame((performance.now()-nuclear.born)/1000, nuclear.point, size.width<size.height);
         desired = new Vector3(...frame.camera); target = new Vector3(...frame.target);
@@ -92,14 +93,16 @@ export function CameraRig() {
         desired=rock.clone().add(new Vector3(2.1,1.1,size.width<size.height?5.6:4.6)).lerp(wide,blend);
         target=rock.clone().lerp(new Vector3(strike.point[0],strike.point[1]+1.2,strike.point[2]),blend);
       }
-      const k = 1-Math.exp(-delta*(activeStrike?8:5));
+      if (dragon && entering) { camera.position.copy(desired); c.target.copy(target); }
+      const k = freeze ? 0 : 1-Math.exp(-delta*(activeStrike?8:5));
+      if (camera instanceof PerspectiveCamera && !freeze) { camera.fov += (fov-camera.fov)*k;camera.updateProjectionMatrix(); }
       camera.position.lerp(desired,k);c.target.lerp(target,k);c.update();
       transition.current=1;
-      if (!activeStrike && camera.position.distanceTo(saved.position)<.03) { camera.position.copy(saved.position);c.target.copy(saved.target);cinematic.current=null;c.enabled=true; }
-      if (aim.shake>.001) { const s=aim.shake;previousShake.current.set(Math.sin(performance.now()*.1)*s,Math.cos(performance.now()*.13)*s,0);camera.position.add(previousShake.current);aim.shake*=Math.exp(-delta*3.5); }
+      if (!activeStrike && camera.position.distanceTo(saved.position)<.03) { camera.position.copy(saved.position);c.target.copy(saved.target);if(camera instanceof PerspectiveCamera){camera.fov=saved.fov;camera.updateProjectionMatrix();}cinematic.current=null;c.enabled=true; }
+      if (!freeze && aim.shake>.001) { const s=aim.shake;previousShake.current.set(Math.sin(performance.now()*.1)*s,Math.cos(performance.now()*.13)*s,0);camera.position.add(previousShake.current);aim.shake*=Math.exp(-delta*3.5); }
       return;
     }
-    if (reduced && cinematic.current) { camera.position.copy(cinematic.current.position); controls.current.target.copy(cinematic.current.target); cinematic.current = null; }
+    if (reduced && cinematic.current) { camera.position.copy(cinematic.current.position); controls.current.target.copy(cinematic.current.target); if(camera instanceof PerspectiveCamera){camera.fov=cinematic.current.fov;camera.updateProjectionMatrix();}cinematic.current = null; }
     controls.current.enabled = true;
     if (transition.current < 1) {
       transition.current = Math.min(1, transition.current + delta * 2.6);
