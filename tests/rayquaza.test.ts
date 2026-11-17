@@ -70,9 +70,9 @@ test('custom pose changes through energy charge, release, meteor tracking and th
  assert.ok(Math.max(...dive.tail.flat().map(Math.abs))<Math.max(...rayquazaJointPose(4,'ascent').tail.flat().map(Math.abs)));
 });
 
-test('ascent impact has brief camera hold and bounded ballistic fragments that fade out',()=>{
+test('ascent impact keeps the camera moving and bounded ballistic fragments fade out',()=>{
  const point:[number,number,number]=[0,0,0],impact=WEAPONS.ascent.impact;
- assert.equal(rayquazaFrame(impact+.08,'ascent',point).freeze,true);assert.equal(rayquazaFrame(impact+.2,'ascent',point).freeze,false);
+ assert.notDeepEqual(rayquazaFrame(impact+.08,'ascent',point).camera,rayquazaFrame(impact+.2,'ascent',point).camera);
  assert.ok(rayquazaFrame(impact-.2,'ascent',point).fov<rayquazaFrame(impact+.2,'ascent',point).fov);
  for(let i=0;i<200;i++){
   for(const t of [0,.1,.7,1.4,2,3,5]){const p=ascentBurstParticle(i,t);assert.ok([...p.position,p.size,p.fade].every(Number.isFinite));assert.ok(p.position[1]>=.03);assert.ok(p.fade>=0&&p.fade<=1);}
@@ -84,4 +84,34 @@ test('arms bend at the elbows and tuck backwards during the ascent dive',()=>{
  const cruise=rayquazaJointPose(5,'draco'),charge=rayquazaJointPose(9.5,'draco'),dive=rayquazaJointPose(12,'ascent');
  assert.ok(cruise.elbow>.7&&charge.elbow>cruise.elbow);
  assert.ok(cruise.armDrop>.4&&dive.arm<-.9&&dive.elbow>.5);
+});
+
+test('cinematic camera and its velocity remain continuous at every shot boundary',()=>{
+ const point:[number,number,number]=[2,0,-7],dt=.0001;
+ for(const skill of ['draco','ascent'] as const)for(const portrait of [false,true]){
+  for(const time of [2.8,5,7.2,8.8,9.9,10.4,11.3,11.4,11.6,12.25,12.3,12.45,12.9,15.8]){
+   const a=rayquazaFrame(time-dt,skill,point,portrait),b=rayquazaFrame(time,skill,point,portrait),c=rayquazaFrame(time+dt,skill,point,portrait);
+   for(const field of ['camera','target'] as const){
+    const previous=new Vector3(...a[field]),current=new Vector3(...b[field]),next=new Vector3(...c[field]);
+    assert.ok(previous.distanceTo(next)<.03,`${skill} ${field} cut at ${time}`);
+    const before=current.clone().sub(previous).divideScalar(dt),after=next.clone().sub(current).divideScalar(dt);
+    assert.ok(before.distanceTo(after)<.15,`${skill} ${field} speed jump at ${time}`);
+   }
+   assert.ok(Math.abs(a.fov-c.fov)<.02);
+  }
+  for(let age=0;age<WEAPONS[skill].duration;age+=.025){const f=rayquazaFrame(age,skill,point,portrait);assert.ok(f.camera[1]>point[1]+10);assert.ok(new Vector3(...f.camera).distanceTo(new Vector3(...f.target))>16);}
+ }
+ const camera=readFileSync('src/scene/Camera.tsx','utf8');assert.match(camera,/camera.lookAt\(c.target\)/);assert.doesNotMatch(camera,/dragon && entering/);
+});
+test('Draco Meteor uses a heavy rock barrage and a starfield without a planet',()=>{
+ const meteor=readFileSync('src/scene/DracoMeteorVfx.tsx','utf8'),space=readFileSync('src/scene/RayquazaAtmosphere.tsx','utf8');
+ assert.match(meteor,/draco-heavy-meteor/);assert.match(meteor,/EdgesGeometry/);assert.match(meteor,/instancedMesh/);
+ assert.match(space,/<points>/);assert.doesNotMatch(space,/sphereGeometry|planet/);
+ assert.ok(dracoMeteor([0,0,0],0,WEAPONS.draco.firstImpact-1.8).position[1]>40);
+});
+
+test('Dragon Ascent follows the actual curved flight path without a cone or camera stop',()=>{
+ const effect=readFileSync('src/scene/DragonAscentVfx.tsx','utf8'),camera=readFileSync('src/scene/Camera.tsx','utf8');
+ assert.match(effect,/ascent-curved-light-wake/);assert.match(effect,/ascent-radial-energy-burst/);assert.match(effect,/rayquazaPosition\(time/);
+ assert.doesNotMatch(effect,/coneGeometry|cylinderGeometry/);assert.doesNotMatch(camera,/freeze/);
 });

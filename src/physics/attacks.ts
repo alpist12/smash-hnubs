@@ -8,7 +8,7 @@ import type { V3 } from '../data/types';
 
 export interface Target { point: () => Vector3; facing?: () => number; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean, weapon?: WeaponId) => void }
 export const targets = new Map<string, Target>();
-export const aim = { active: false, point: [0, .78, .4] as V3, target: '', holding: false, last: -10, shake: 0, camera: [8, 8.5, 10.5] as V3, normal: [0, 1, 0] as V3 };
+export const aim = { active: false, point: [0, .78, .4] as V3, target: '', holding: false, last: -10, shake: 0, kick: 0, camera: [8, 8.5, 10.5] as V3, normal: [0, 1, 0] as V3 };
 let serial = 0;
 const lastShots = new Map<WeaponId, number>();
 let shotRound = -1;
@@ -31,7 +31,8 @@ function detonate(weapon: WeaponId, point: V3, selected: string) {
     target.hit(config.power * strength, dir.multiplyScalar(config.impulse * strength).toArray() as V3, point, config.knockback * Math.max(.35, strength), false, weapon);
   }
   state.addEffect({ id: nextEffectId(), type: weapon, point, born: performance.now(), radius: config.radius });
-  aim.shake = weapon === 'ascent' ? .5 : weapon === 'draco' ? .18 : weapon === 'meteor' ? .55 : weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
+  aim.kick = weapon === 'ascent' ? 12 : weapon === 'meteor' ? 10 : weapon === 'draco' ? 4 : 0;
+  aim.shake = weapon === 'ascent' ? .8 : weapon === 'draco' ? .3 : weapon === 'meteor' ? .85 : weapon === 'bomb' ? .2 : weapon === 'missile' ? .17 : weapon === 'sonic' ? .12 : .035;
   if (state.sound) playImpact(weapon);
 }
 export function attack(point: V3, selected = '') {
@@ -89,7 +90,7 @@ export function tickAttacks() {
   if (nuclear && !nuclear.impacted && now * 1000 >= nuclear.born + WEAPONS.nuke.charge * 1000) {
     nukeTargets = [...targets];
     useGame.setState({ nuke: { ...nuclear, impacted: true }, usedNuke: true });
-    aim.shake = .65;
+    aim.shake = 1.1; aim.kick = 14;
     if (state.sound) playImpact('nuke');
   }
   if (nuclear?.impacted || nukeTargets.length) {
@@ -123,4 +124,4 @@ export function tickAttacks() {
   if (strike && now * 1000 >= strike.born + (WEAPONS.meteor.flight + WEAPONS.meteor.aftermath) * 1000) useGame.setState({ meteor: null });
   if (aim.holding && state.weapon === 'laser') attack(aim.point, aim.target);
 }
-export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, meteor: null, nuke: null }); bombs = []; missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; }
+export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, meteor: null, nuke: null }); bombs = []; missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; aim.kick = 0; }

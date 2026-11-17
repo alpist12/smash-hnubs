@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { AdditiveBlending, Color, EdgesGeometry, Group, IcosahedronGeometry, Mesh, MeshBasicMaterial, Vector3 } from 'three';
+import { AdditiveBlending, Color, EdgesGeometry, Group, IcosahedronGeometry, Mesh, MeshBasicMaterial, PointLight, Vector3 } from 'three';
 import { meteorPosition, meteorProgress, type MeteorStrike } from '../data/meteor';
 import { useGame } from '../game/store';
 import { stopMeteorFall } from '../game/audio';
@@ -9,6 +9,7 @@ import config from '../weapons/meteor';
 function MeteorVisual({ strike }: { strike: MeteorStrike }) {
   const { scene, gl } = useThree();
   const rock = useRef<Group>(null), trail = useRef<Group>(null), marker = useRef<Group>(null), dust = useRef<Group>(null), chunks = useRef<Group>(null), wave = useRef<Mesh>(null);
+  const wave2 = useRef<Mesh>(null), fireball = useRef<Mesh>(null), pillar = useRef<Mesh>(null), glow = useRef<PointLight>(null);
   const quality = useGame(s => s.quality), sound = useGame(s => s.sound);
   const count = quality === 'low' ? 12 : quality === 'medium' ? 20 : 28;
   const atmosphere=useMemo(()=>({ background:scene.background instanceof Color?scene.background.clone():null, fog:scene.fog?.color.clone(), exposure:gl.toneMappingExposure }),[scene,gl]);
@@ -31,6 +32,7 @@ function MeteorVisual({ strike }: { strike: MeteorStrike }) {
     if (rock.current) {
       rock.current.visible = impact < 0;
       rock.current.position.set(...meteorPosition(strike.point, t));
+      rock.current.scale.setScalar(1.6);
       rock.current.quaternion.setFromUnitVectors(new Vector3(0,1,0), new Vector3(5,-18,3).normalize());
       rock.current.rotateY(age * 1.2);
     }
@@ -65,6 +67,14 @@ function MeteorVisual({ strike }: { strike: MeteorStrike }) {
       wave.current.scale.setScalar(Math.max(.01, impact * config.radius * 1.8));
       (wave.current.material as MeshBasicMaterial).opacity = fade * .8;
     }
+    const hit = Math.max(0, impact);
+    if (wave2.current) { const e = Math.max(0, impact - .12); wave2.current.visible = impact >= .12 && e < 1; wave2.current.scale.setScalar(.01 + Math.sqrt(e) * config.radius * 2.4); (wave2.current.material as MeshBasicMaterial).opacity = Math.max(0, 1 - e) * .9; }
+    if (fireball.current) { fireball.current.visible = impact >= 0 && impact < 1.1; fireball.current.scale.setScalar(.1 + Math.sqrt(hit) * 5); (fireball.current.material as MeshBasicMaterial).opacity = Math.max(0, 1 - hit / 1.1); }
+    if (pillar.current) { pillar.current.visible = impact >= 0 && impact < .7; pillar.current.scale.set(1 + hit * 3, Math.min(1, hit * 8) * 16, 1 + hit * 3); (pillar.current.material as MeshBasicMaterial).opacity = Math.max(0, 1 - hit / .7) * .8; }
+    if (glow.current) {
+      if (impact < 0) { if (rock.current) glow.current.position.copy(rock.current.position); glow.current.intensity = 40 * t * t; }
+      else { glow.current.position.set(strike.point[0], strike.point[1] + 2, strike.point[2]); glow.current.intensity = 220 * Math.exp(-impact * 2.5); }
+    }
   });
   return <group name="meteor-cinematic-effect">
     <group ref={rock}>
@@ -83,6 +93,12 @@ function MeteorVisual({ strike }: { strike: MeteorStrike }) {
     <group ref={dust} position={strike.point} visible={false}>{Array.from({length:count},(_,i)=><mesh key={i}><icosahedronGeometry args={[1,1]} /><meshBasicMaterial color={i%3?'#827d74':'#b3a48e'} transparent opacity={0} depthWrite={false} /></mesh>)}</group>
     <group ref={chunks} position={strike.point} visible={false}>{Array.from({length:quality==='low'?10:18},(_,i)=><mesh key={i}><icosahedronGeometry args={[.08+(i%3)*.035,0]} /><meshStandardMaterial color={i%3?'#453c33':'#ba5f26'} roughness={1} flatShading /></mesh>)}</group>
     <mesh ref={wave} position={[strike.point[0],strike.point[1]+.04,strike.point[2]]} rotation={[-Math.PI/2,0,0]} visible={false}><ringGeometry args={[.94,1,64]} /><meshBasicMaterial color="#ffcd8e" transparent opacity={0} depthWrite={false} side={2} /></mesh>
+    <group position={strike.point}>
+      <mesh ref={wave2} position={[0,.08,0]} rotation={[-Math.PI/2,0,0]} visible={false}><ringGeometry args={[.85,1,64]} /><meshBasicMaterial color="#fff4dc" transparent opacity={0} depthWrite={false} side={2} toneMapped={false} /></mesh>
+      <mesh ref={fireball} position={[0,.6,0]} visible={false}><sphereGeometry args={[1,24,16]} /><meshBasicMaterial color="#ff8f3a" transparent depthWrite={false} toneMapped={false} blending={AdditiveBlending} /></mesh>
+      <mesh ref={pillar} position={[0,8,0]} visible={false}><cylinderGeometry args={[.5,1,1,24,1,true]} /><meshBasicMaterial color="#ffd9a0" transparent depthWrite={false} toneMapped={false} blending={AdditiveBlending} side={2} /></mesh>
+    </group>
+    <pointLight ref={glow} color="#ff7a2a" intensity={0} distance={40} decay={1.4} />
   </group>;
 }
 export function Meteor() { const strike=useGame(s=>s.meteor); return strike ? <MeteorVisual key={strike.id} strike={strike} /> : null; }

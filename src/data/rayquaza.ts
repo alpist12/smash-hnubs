@@ -6,7 +6,6 @@ export interface RayquazaStrike {id:number;point:V3;born:number;skill:RayquazaSk
 export const RAYQUAZA_INTRO={descent:2.8,orbit:7.2,reveal:8.8,radius:18} as const;
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const smooth=(n:number)=>{const t=clamp(n);return t*t*(3-2*t);};
-const mix=(a:V3,b:V3,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as V3;
 const add=(a:V3,b:V3)=>a.map((v,i)=>v+b[i]) as V3;
 function curve(a:V3,b:V3,c:V3,d:V3,t:number):V3 {const u=1-t;return a.map((v,i)=>u*u*u*v+3*u*u*t*b[i]+3*u*t*t*c[i]+t*t*t*d[i]) as V3;}
 export function rayquazaPhase(age:number,skill:RayquazaSkill){
@@ -21,13 +20,13 @@ export function dracoPoint(point:V3,index:number):V3 {
 export function dracoMeteor(point:V3,index:number,age:number){
  const target=dracoPoint(point,index),landing=draco.firstImpact+index*draco.interval;
  const t=clamp((age-(landing-1.9))/1.9),left=1-t*t;
- return {position:[target[0]-left*9,target[1]+left*32,target[2]-left*6] as V3,visible:t>0&&t<1,progress:t};
+ return {position:[target[0]-left*16,target[1]+left*48,target[2]-left*10] as V3,visible:t>0&&t<1,progress:t};
 }
 export function rayquazaPosition(age:number,skill:RayquazaSkill,point:V3):V3 {
  const {descent,orbit,reveal,radius}=RAYQUAZA_INTRO;let p:V3;
- if(age<descent)p=curve([-12,62,-34],[-18,40,-28],[-14,18,-radius],[0,13,-radius],clamp(age/descent));
+ if(age<descent)p=curve([-12,62,-34],[-18,40,-28],[-24,13,-radius],[0,13,-radius],clamp(age/descent));
  else if(age<orbit){const t=(age-descent)/(orbit-descent),a=-Math.PI/2+t*Math.PI*2;p=[Math.cos(a)*radius,13-t*4+Math.sin(t*Math.PI*2)*.7,Math.sin(a)*radius];}
- else if(age<reveal)p=curve([0,9,-radius],[8,9,-radius],[7,9,-8],[0,8,-5],smooth((age-orbit)/(reveal-orbit)));
+ else if(age<reveal)p=curve([0,9,-radius],[13.7,8.94,-radius],[0,8,-5],[0,8,-5],clamp((age-orbit)/(reveal-orbit)));
  else if(skill==='draco'){
   const t=age-reveal,leave=smooth((age-(draco.duration-2))/2);
   p=[Math.sin(t*.7)*.3,8+Math.sin(t*1.1)*.18+leave*22,-5-leave*28];
@@ -38,23 +37,47 @@ export function rayquazaPosition(age:number,skill:RayquazaSkill,point:V3):V3 {
  else{const t=age-ascent.impact;p=[t*3,.5+t*t*4,t*5];}
  return add(point,p);
 }
+type CameraKey=[number,V3,V3,number];
+function cameraTrack(age:number,keys:CameraKey[]){
+ const i=Math.max(0,keys.findIndex((_,index)=>index<keys.length-1&&age<keys[index+1][0]));
+ const a=keys[i],b=keys[i+1],before=keys[Math.max(0,i-1)],after=keys[Math.min(keys.length-1,i+2)];
+ const span=b[0]-a[0],t=clamp((age-a[0])/span),t2=t*t,t3=t2*t;
+ const sample=(value:(key:CameraKey)=>number)=>{
+  const av=value(a),bv=value(b),m0=(bv-value(before))/(b[0]-before[0]),m1=(value(after)-av)/(after[0]-a[0]);
+  return (2*t3-3*t2+1)*av+(t3-2*t2+t)*span*m0+(-2*t3+3*t2)*bv+(t3-t2)*span*m1;
+ };
+ return {camera:[0,1,2].map(axis=>sample(key=>key[1][axis])) as V3,target:[0,1,2].map(axis=>sample(key=>key[2][axis])) as V3,fov:sample(key=>key[3])};
+}
 export function rayquazaFrame(age:number,skill:RayquazaSkill,point:V3,portrait=false){
  const position=rayquazaPosition(age,skill,point),next=rayquazaPosition(age+.02,skill,point),phase=rayquazaPhase(age,skill);
- let camera:V3,target:V3,bank=0;
- if(phase==='space'){camera=add(position,[12,4,portrait?28:22]);target=position;bank=-.18;}
- else if(phase==='orbit'){
-  const t=(age-RAYQUAZA_INTRO.descent)/(RAYQUAZA_INTRO.orbit-RAYQUAZA_INTRO.descent);
-  const a=-Math.PI/2+t*Math.PI*2;camera=add(point,[Math.cos(a-.5)*(portrait?43:33),23-t*7,Math.sin(a-.5)*(portrait?43:33)]);target=mix(position,add(point,[0,5,0]),.25);bank=-.5;
- }else if(phase==='reveal'){
-  const t=smooth((age-RAYQUAZA_INTRO.orbit)/(RAYQUAZA_INTRO.reveal-RAYQUAZA_INTRO.orbit));
-  camera=mix(add(point,[8,16,-(portrait?40:31)]),add(position,[4,2,portrait?23:17]),t);target=add(position,[0,1,2]);bank=-.5*(1-t);
- }else if(phase==='charge'){camera=add(position,[4,2,portrait?23:17]);target=add(position,[0,.8,3]);}
- else if(phase==='rise'||phase==='dive'){camera=add(position,[9,4,portrait?25:18]);target=position;bank=phase==='rise'?-.25:0;}
- else if(phase==='release'){const t=smooth((age-draco.release)/(draco.firstImpact-draco.release));camera=mix(add(position,[4,2,portrait?23:17]),add(point,[12,20,portrait?40:29]),t);target=mix(add(position,[0,2,3]),add(point,[0,13,0]),t);}
- else {camera=add(point,[12,16,portrait?40:29]);target=add(point,[0,4,0]);}
- const freeze=skill==='ascent'&&age>=ascent.impact&&age<ascent.impact+.12;
- const fov=phase==='reveal'||phase==='charge'?32:phase==='dive'?30:skill==='ascent'&&age>=ascent.impact?48:42;
- return {position,next,camera,target,phase,bank,freeze,fov};
+ // Keep the camera on the same side of the action, with continuous position and velocity at each key.
+ const keys:CameraKey[]=[
+  [0,[12,67,-6],[-12,62,-34],43],
+  [2.8,[31,26,25],[0,12,0],46],
+  [5,[33,24,27],[0,10,0],46],
+  [7.2,[27,19,23],[0,9,-8],42],
+  [8.8,[9,12,18],[0,8,-3],36],
+ ];
+ if(skill==='draco')keys.push(
+  [10.4,[9,12,18],[0,9,-3],36],
+  [11.4,[15,23,31],[0,16,0],43],
+  [12.3,[18,23,33],[0,8,0],46],
+  [15.8,[20,22,34],[0,6,0],46],
+  [18,[22,24,36],[0,7,0],46],
+ );
+ else keys.push(
+  [9.9,[10,14,21],[0,10,-5],37],
+  [11.3,[25,27,29],[0,22,-8],42],
+  [11.6,[26,26,30],[0,21,-8],42],
+  [12.25,[25,20,32],[0,5,0],40],
+  [12.45,[25,18,32],[0,2,0],40],
+  [12.9,[26,19,34],[0,3,0],46],
+  [16.5,[28,22,36],[0,5,0],46],
+ );
+ const shot=cameraTrack(Math.min(age,keys[keys.length-1][0]-.00001),keys);
+ if(portrait){shot.camera[0]*=1.22;shot.camera[2]*=1.22;shot.fov+=5;}
+ const bank=phase==='space'?-.18:phase==='orbit'?-.35:phase==='reveal'?-.35*(1-smooth((age-7.2)/1.6)):phase==='rise'?-.18:0;
+ return {position,next,camera:add(point,shot.camera),target:add(point,shot.target),phase,bank,fov:shot.fov};
 }
 /** Body and tail joints receive delayed waves rather than replaying a coiled idle pose. */
 export function rayquazaJointPose(age:number,skill:RayquazaSkill){

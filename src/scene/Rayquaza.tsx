@@ -1,12 +1,13 @@
+import {DracoMeteorVfx} from './DracoMeteorVfx';
 import {DragonAscentVfx} from './DragonAscentVfx';
 import {Suspense,useEffect,useMemo,useRef,type RefObject} from 'react';
 import {useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
-import {Box3,Group,Vector3,Quaternion,Euler,Mesh,Line,BufferGeometry,Float32BufferAttribute,LineBasicMaterial} from 'three';
+import {AdditiveBlending,Box3,Group,Vector3,Quaternion,Euler,Mesh,MeshBasicMaterial,Line,BufferGeometry,Float32BufferAttribute,LineBasicMaterial} from 'three';
 import {useGame} from '../game/store';
 import {stopRayquaza} from '../game/audio';
 import {RayquazaAtmosphere} from './RayquazaAtmosphere';
-import {dracoMeteor,rayquazaFrame,rayquazaJointPose,RAYQUAZA_INTRO,type RayquazaStrike} from '../data/rayquaza';
+import {rayquazaFrame,rayquazaJointPose,RAYQUAZA_INTRO,type RayquazaStrike} from '../data/rayquaza';
 import draco from '../weapons/draco';
 import ascent from '../weapons/ascent';
 const URL=`${import.meta.env.BASE_URL}models/rayquaza/rayquaza.glb`,FORWARD=new Vector3(0,0,1),ROLL=new Vector3(0,0,1);
@@ -70,22 +71,21 @@ function FlightWake({strike}:{strike:RayquazaStrike}){
  });
  return <primitive object={line}/>;
 }
-function DracoRain({strike}:{strike:RayquazaStrike}){
- const root=useRef<Group>(null);
+/** Roar at the reveal: rings burst from the mouth toward the camera side. */
+function RoarWave({strike,mouth}:{strike:RayquazaStrike;mouth:RefObject<Vector3>}){
+ const rings=useRef<Group>(null),origin=useRef<Vector3|null>(null);
  useFrame(()=>{
-  if(!root.current)return;const age=(performance.now()-strike.born)/1000;
-  root.current.children.forEach((object,index)=>{const frame=dracoMeteor(strike.point,index,age);object.visible=frame.visible;object.position.set(...frame.position);object.scale.setScalar(.85+(index%3)*.22);});
+  const t=(performance.now()-strike.born)/1000-RAYQUAZA_INTRO.orbit;
+  if(!rings.current)return;rings.current.visible=t>=0&&t<1.8;if(!rings.current.visible)return;
+  origin.current??=mouth.current.clone();rings.current.position.copy(origin.current);
+  rings.current.children.forEach((child,i)=>{const e=Math.max(0,t-i*.28),mesh=child as Mesh;mesh.position.z=e*6;mesh.scale.setScalar(.3+e*9);(mesh.material as MeshBasicMaterial).opacity=Math.max(0,1-e/1.1)*.75;});
  });
- return <group ref={root} name="draco-meteor-rain">{Array.from({length:draco.count},(_,i)=><group key={i} visible={false} rotation={[.29,0,-.29]}>
-  <mesh><icosahedronGeometry args={[.55,2]}/><meshStandardMaterial color="#4d304e" emissive="#ea5516" emissiveIntensity={2.2} roughness={.7}/></mesh>
-  <mesh position={[0,2.2,0]}><coneGeometry args={[.52,4.8,12]}/><meshBasicMaterial color="#ffac58" transparent opacity={.75} depthWrite={false} toneMapped={false}/></mesh>
- <mesh scale={1.5}><sphereGeometry args={[.55,12,8]}/><meshBasicMaterial color="#ffd18c" transparent opacity={.22} depthWrite={false} toneMapped={false}/></mesh>
- </group>)}</group>;
+ return <group ref={rings} visible={false} name="rayquaza-roar-wave">{[0,1,2].map(i=><mesh key={i}><torusGeometry args={[1,.05,6,64]}/><meshBasicMaterial color={i?'#9dffc0':'#f2fff4'} transparent opacity={0} depthWrite={false} toneMapped={false} blending={AdditiveBlending}/></mesh>)}</group>;
 }
 function Sequence({strike}:{strike:RayquazaStrike}){
  const sound=useGame(s=>s.sound),mouth=useRef(new Vector3());
  useEffect(()=>{if(!sound)stopRayquaza();},[sound]);useEffect(()=>()=>stopRayquaza(),[]);
- return <><RayquazaAtmosphere strike={strike}/><FlightWake strike={strike}/><Suspense fallback={null}><Dragon strike={strike} mouth={mouth}/></Suspense>{strike.skill==='draco'?<><DracoCharge strike={strike} mouth={mouth}/><DracoRain strike={strike}/></>:<DragonAscentVfx strike={strike}/>}</>;
+ return <><RayquazaAtmosphere strike={strike}/><FlightWake strike={strike}/><RoarWave strike={strike} mouth={mouth}/><Suspense fallback={null}><Dragon strike={strike} mouth={mouth}/></Suspense>{strike.skill==='draco'?<><DracoCharge strike={strike} mouth={mouth}/><DracoMeteorVfx strike={strike}/></>:<DragonAscentVfx strike={strike}/>}</>;
 }
 export function Rayquaza(){
  const strike=useGame(s=>s.rayquaza),weapon=useGame(s=>s.weapon);

@@ -34,24 +34,89 @@ function budget() {
   recent.push(now); return true;
 }
 const vary = (n: number, k = .12) => n * (1 + (Math.random() * 2 - 1) * k);
-function env(c: AudioContext, t: number, peak: number, attack: number, dur: number) {
-  const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(.0002, peak), t + attack); g.gain.exponentialRampToValueAtTime(.0001, t + dur); g.connect(master!); return g;
+function env(c: AudioContext, t: number, peak: number, attack: number, dur: number, to: AudioNode = master!) {
+  const g = c.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(.0002, peak), t + attack); g.gain.exponentialRampToValueAtTime(.0001, t + dur); g.connect(to); return g;
 }
-function noise(c: AudioContext, t: number, dur: number, type: BiquadFilterType, f0: number, f1: number, peak: number, attack = .005, q = .8) {
+function noise(c: AudioContext, t: number, dur: number, type: BiquadFilterType, f0: number, f1: number, peak: number, attack = .005, q = .8, to?: AudioNode) {
   const src = c.createBufferSource(); src.buffer = noiseBuffer!;
   const filter = c.createBiquadFilter(); filter.type = type; filter.Q.value = q;
   filter.frequency.setValueAtTime(f0, t); filter.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-  src.connect(filter); filter.connect(env(c, t, peak, attack, dur));
+  src.connect(filter); filter.connect(env(c, t, peak, attack, dur, to));
   src.start(t, Math.random() * 1.5); src.stop(t + dur + .05); return src;
 }
-function tone(c: AudioContext, t: number, dur: number, type: OscillatorType, f0: number, f1: number, peak: number, attack = .004) {
+function tone(c: AudioContext, t: number, dur: number, type: OscillatorType, f0: number, f1: number, peak: number, attack = .004, to?: AudioNode) {
   const o = c.createOscillator(); o.type = type;
   o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-  o.connect(env(c, t, peak, attack, dur)); o.start(t); o.stop(t + dur + .05); return o;
+  o.connect(env(c, t, peak, attack, dur, to)); o.start(t); o.stop(t + dur + .05); return o;
 }
 /** 자글자글 부서지는 잔소리: 짧은 고역 노이즈 틱을 흩뿌린다. */
 function crackle(c: AudioContext, t: number, dur: number, count: number, freq: number, peak: number) {
-  for (let i = 0; i < count; i++) noise(c, t + Math.random() * dur, .012 + Math.random() * .03, 'bandpass', vary(freq, .4), vary(freq * .6, .3), peak * (.4 + Math.random() * .6), .001, 2.5);
+  return Array.from({ length: count }, () => noise(c, t + Math.random() * dur, .012 + Math.random() * .03, 'bandpass', vary(freq, .4), vary(freq * .6, .3), peak * (.4 + Math.random() * .6), .001, 2.5));
+}
+
+type Src = AudioScheduledSourceNode;
+let wet: GainNode | undefined, heavy: WaveShaperNode | undefined;
+/** 궁극기 전용 버스: 4.5초 합성 잔향 + tanh 포화. 처음 쓸 때 한 번 만든다. */
+function cinema(c: AudioContext) {
+  if (!wet || !heavy) {
+    const length = Math.floor(c.sampleRate * 4.5), ir = c.createBuffer(2, length, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 3; }
+    const verb = c.createConvolver(), back = c.createGain(); verb.buffer = ir; back.gain.value = .5; verb.connect(back); back.connect(master!);
+    wet = c.createGain(); wet.connect(master!); wet.connect(verb);
+    heavy = c.createWaveShaper(); const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) curve[i] = Math.tanh((i / 511.5 - 1) * 3.5);
+    heavy.curve = curve; heavy.oversample = '4x'; heavy.connect(wet);
+  }
+  return { wet, heavy };
+}
+/** 대폭발: 고역 파열 + 서브 드롭 + 포화된 저역 굉음 + 뒤늦은 여진 + 잔해. size 1 = 운석. */
+function boom(c: AudioContext, t: number, size: number): Src[] {
+  const { wet, heavy } = cinema(c), d = 2.2 * size;
+  const rumble = noise(c, t, d * 1.6, 'lowpass', 2600, 40, .9, .004, .7, heavy); rumble.loop = true;
+  return [
+    noise(c, t, .14, 'highpass', 3500, 900, .8, .001, .8, wet),
+    tone(c, t, d, 'sine', 120, 24, 1, .003, heavy),
+    tone(c, t, d * .7, 'triangle', 62, 22, .6, .006, heavy),
+    rumble,
+    noise(c, t + .05, d * .8, 'bandpass', 900, 120, .45, .02, 1, wet),
+    tone(c, t + .35 * size, d * 1.2, 'sine', 46, 20, .5, .3, wet),
+    ...crackle(c, t + .06, d, Math.round(30 * size), 1700, .3),
+  ];
+}
+/** 충돌 직전까지 차오르다 뚝 끊기는 상승음: 열리는 노이즈 + 디튠 톱니 3겹. */
+function riser(c: AudioContext, t: number, dur: number, from: number, to: number): Src[] {
+  const { wet } = cinema(c), air = noise(c, t, dur, 'bandpass', 250, 5200, .38, dur * .92, 1.2, wet); air.loop = true;
+  return [air, ...[-9, 0, 9].map(cents => tone(c, t, dur, 'sawtooth', from * 2 ** (cents / 1200), to * 2 ** (cents / 1200), .05, dur * .9, wet))];
+}
+/** 예고편식 '브라암': 저음 톱니 화음이 로우패스를 확 열었다 닫는다. */
+function braam(c: AudioContext, t: number, dur: number, root: number): Src[] {
+  const filter = c.createBiquadFilter(); filter.type = 'lowpass'; filter.Q.value = 2;
+  filter.frequency.setValueAtTime(140, t); filter.frequency.exponentialRampToValueAtTime(2200, t + .35); filter.frequency.exponentialRampToValueAtTime(180, t + dur);
+  filter.connect(env(c, t, .32, .06, dur, cinema(c).heavy));
+  return [.5, 1, 1.007, 1.5, 2].map(k => { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(root * k, t); o.connect(filter); o.start(t); o.stop(t + dur + .05); return o; });
+}
+/** 용의 포효: 비브라토 톱니를 두 포먼트로 거르고 거친 숨과 저음을 얹는다. */
+function roar(c: AudioContext, t: number, dur: number): Src[] {
+  const { heavy } = cinema(c), voice = c.createOscillator(), lfo = c.createOscillator(), depth = c.createGain(), out = env(c, t, .55, .12, dur, heavy);
+  voice.type = 'sawtooth'; voice.frequency.setValueAtTime(150, t); voice.frequency.exponentialRampToValueAtTime(240, t + dur * .25); voice.frequency.exponentialRampToValueAtTime(85, t + dur);
+  lfo.frequency.value = 7; depth.gain.value = 14; lfo.connect(depth); depth.connect(voice.frequency);
+  for (const [f, q] of [[650, 4], [1400, 6]]) { const b = c.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; voice.connect(b); b.connect(out); }
+  for (const n of [voice, lfo]) { n.start(t); n.stop(t + dur + .05); }
+  return [voice, lfo, noise(c, t, dur, 'bandpass', 900, 400, .35, .1, 1.5, heavy), tone(c, t, dur, 'sine', 75, 42, .35, .1, heavy)];
+}
+/** 머리 위를 스쳐 지나가는 바람. */
+function whoosh(c: AudioContext, t: number, dur: number, peak: number): Src[] {
+  const { wet } = cinema(c);
+  return [noise(c, t, dur, 'bandpass', 300, 2800, peak, dur * .6, 1.4, wet), tone(c, t, dur, 'sine', 180, 60, peak * .35, dur * .6, wet)];
+}
+/** 공습 사이렌: 사각파를 삼각 LFO로 오르내린다. */
+function siren(c: AudioContext, t: number, dur: number): Src[] {
+  const o = c.createOscillator(), lfo = c.createOscillator(), depth = c.createGain(), filter = c.createBiquadFilter();
+  o.type = 'square'; o.frequency.value = 720; lfo.type = 'triangle'; lfo.frequency.value = 1.4; depth.gain.value = 220;
+  filter.type = 'lowpass'; filter.frequency.value = 1800;
+  lfo.connect(depth); depth.connect(o.frequency); o.connect(filter); filter.connect(env(c, t, .12, .15, dur, cinema(c).wet));
+  for (const n of [o, lfo]) { n.start(t); n.stop(t + dur); }
+  return [o, lfo];
 }
 
 const on = () => { const c = audioContext(); return c && master && budget() ? c : undefined; };
@@ -66,42 +131,43 @@ export function playImpact(type: string) {
       noise(c, t + .01, .25, 'lowpass', 900, 120, .35, .004);
       break;
     case 'rayquaza-draco': case 'rayquaza-ascent': {
-      stopRayquaza();
-      rayquazaNodes.push(tone(c,t,4,'sine',44,78,.26,.8),tone(c,t,6,'triangle',88,110,.045,1));
-      const entry=noise(c,t+1,3,'bandpass',120,1700,.35,1.4);entry.loop=true;rayquazaNodes.push(entry);
-      for(const at of [3.1,5.3,6.9]){const pass=noise(c,t+at,.75,'bandpass',1800,150,.28,.05);pass.loop=true;rayquazaNodes.push(pass,tone(c,t+at,.65,'sine',160,55,.13,.02));}
-      rayquazaNodes.push(tone(c,t+7.2,1.1,'sawtooth',95,42,.16,.07),noise(c,t+7.2,1,'lowpass',700,90,.28,.07));
-      if(type==='rayquaza-draco')rayquazaNodes.push(tone(c,t+8.8,1.6,'sine',220,950,.2,.8),tone(c,t+8.8,1.6,'triangle',440,1900,.045,.9),noise(c,t+10.4,.7,'highpass',800,4200,.3,.04));
-      else{const dive=noise(c,t+11.6,.85,'bandpass',220,3300,.36,.65);dive.loop=true;rayquazaNodes.push(tone(c,t+9.9,1.4,'sine',90,440,.16,.5),dive);}
+      stopRayquaza(); const { wet } = cinema(c);
+      const entry = noise(c, t + .8, 2.2, 'bandpass', 120, 1700, .35, 1.6, 1, wet); entry.loop = true;
+      rayquazaNodes.push(...braam(c, t, 4.5, 41), tone(c, t, 8.8, 'sine', 38, 55, .3, 2, wet), entry);
+      for (const at of [3.1, 5.3, 6.6]) rayquazaNodes.push(...whoosh(c, t + at, .9, .45));
+      rayquazaNodes.push(...roar(c, t + 7.2, 2.2), ...braam(c, t + 7.25, 2.6, 55));
+      if (type === 'rayquaza-draco') rayquazaNodes.push(
+        ...riser(c, t + 8.8, 1.6, 110, 880),
+        noise(c, t + 10.4, .9, 'highpass', 600, 6000, .45, .02, .8, wet), tone(c, t + 10.4, 1.2, 'sine', 300, 1800, .18, .02, wet),
+        ...whoosh(c, t + 11.2, 1.1, .5),
+      );
+      else rayquazaNodes.push(...riser(c, t + 9.9, 1.4, 90, 520), ...roar(c, t + 11.15, .9), ...riser(c, t + 11.6, .85, 200, 1600));
       break;
     }
     case 'draco':
-      tone(c,t,1.3,'sine',95,26,.6,.004);noise(c,t,1.2,'lowpass',1800,75,.6,.005).loop=true;break;
-    case 'ascent':
-      noise(c,t,.07,'highpass',4200,1100,.45,.001);tone(c,t,3.2,'sine',65,20,.8,.004);noise(c,t,2.4,'lowpass',2200,60,.65,.005).loop=true;noise(c,t+.12,1.5,'bandpass',650,120,.3,.05);break;
-    case 'nuke-arm':
-      stopNuclear();
-      for (let i = 0; i < 3; i++) nuclearNodes.push(tone(c, t + i * .9, .24, 'sine', 880, 660, .3, .01));
-      nuclearNodes.push(tone(c, t + .55, 2.45, 'sine', 180, 1200, .15, 1.7));
-      const flight = noise(c, t + .55, 2.45, 'bandpass', 280, 2600, .35, 1.8); flight.loop = true;
-      nuclearNodes.push(flight);
+      boom(c, t, .75); break;
+    case 'ascent': {
+      const { wet } = cinema(c);
+      boom(c, t, 1.6); tone(c, t, 2, 'sine', 1800, 900, .12, .005, wet); tone(c, t, 2, 'sine', 2700, 1350, .07, .005, wet); break;
+    }
+    case 'nuke-arm': {
+      stopNuclear(); const { wet } = cinema(c);
+      for (let i = 0; i < 3; i++) nuclearNodes.push(tone(c, t + i * .9, .3, 'square', 880, 660, .14, .01, wet));
+      nuclearNodes.push(...siren(c, t, 2.75), ...braam(c, t + .1, 2.8, 36.7), ...riser(c, t + .55, 2.4, 50, 300), tone(c, t + 1, 1.95, 'sine', 1400, 500, .08, .3, wet));
       break;
-    case 'nuke':
-      stopNuclear();
-      nuclearNodes.push(noise(c, t, .09, 'bandpass', 2400, 200, .6, .001), tone(c, t, 5, 'sine', 65, 20, .9, .01));
-      const rumble = noise(c, t, 4.8, 'lowpass', 1300, 35, .85, .01); rumble.loop = true;
-      nuclearNodes.push(rumble, noise(c, t + .08, 2.3, 'bandpass', 500, 90, .35, .1));
+    }
+    case 'nuke': {
+      stopNuclear(); const { wet } = cinema(c);
+      const wind = noise(c, t + .4, 7, 'lowpass', 800, 60, .5, 1.2, .7, wet); wind.loop = true;
+      nuclearNodes.push(...boom(c, t, 2.4), ...boom(c, t + 1.1, 1.2), ...braam(c, t + .05, 5, 27.5), wind);
       break;
+    }
     case 'meteor':
-      tone(c, t, 2.4, 'sine', 85, 24, .9, .004);
-      tone(c, t, 1.8, 'triangle', 42, 20, .55, .008);
-      noise(c, t, 2.1, 'lowpass', 1900, 45, .85, .004).loop = true;
-      crackle(c, t + .08, 1.5, 45, 1500, .28);
-      break;
+      boom(c, t, 1.25); break;
     case 'meteor-fall': {
-      stopMeteorFall();
-      const wind = noise(c, t, meteor.flight, 'bandpass', 140, 2400, .35, meteor.flight*.75, .7); wind.loop = true;
-      meteorFallNodes = [wind, tone(c, t, meteor.flight, 'sine', 35, 210, .25, meteor.flight*.7), tone(c,t,meteor.flight,'sawtooth',55,165,.045,meteor.flight*.7), noise(c,t+meteor.flight-.7,.7,'highpass',800,3200,.17,.3)];
+      stopMeteorFall(); const f = meteor.flight;
+      const wind = noise(c, t, f, 'bandpass', 140, 2400, .35, f * .75, .7, cinema(c).wet); wind.loop = true;
+      meteorFallNodes = [wind, ...braam(c, t, 2.4, 46), ...riser(c, t + .4, f - .4, 60, 360), tone(c, t, f, 'sine', 35, 210, .25, f * .7)];
       break;
     }
     case 'bomb': case 'missile': // 콰광: 저역 폭발 + 길게 무너지는 잔향

@@ -117,3 +117,24 @@ footer{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display
 .rayquaza-cinematic .meteor-letterbox{height:clamp(24px,5vh,48px)}.rayquaza-cinematic .rayquaza-caption{left:5%;bottom:15%;transform:none;text-align:left;background:#0c131ba8;border:0;border-left:2px solid #b4dbb0;width:auto;max-width:90%;padding:12px 23px}.rayquaza-caption strong{font-size:clamp(38px,7vw,76px);letter-spacing:2px}.rayquaza-caption small{font-size:10px;letter-spacing:3px;color:#bddbbd}.rayquaza-caption span{letter-spacing:.5px}.phase-reveal .rayquaza-caption{animation:rayquaza-reveal .65s ease-out both}.phase-space .rayquaza-caption strong,.phase-orbit .rayquaza-caption strong{font-size:clamp(28px,4vw,46px)}@keyframes rayquaza-reveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.phase-reveal .rayquaza-caption{animation:none}}
 
 .ascent-impact-flash{position:absolute;inset:0;background:#edffda;animation:ascent-hit-flash .32s ease-out forwards;pointer-events:none}@keyframes ascent-hit-flash{0%{opacity:.75}100%{opacity:0}}@media(prefers-reduced-motion:reduce){.ascent-impact-flash{display:none}}
+/* 궁극기 공통 화면 연출: 컷인 · 집중선 · 충격 섬광 */
+.ult-cutin{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;pointer-events:none;z-index:2}
+.ult-cutin-band{width:150%;padding:clamp(10px,2.4vh,22px) 0;background:linear-gradient(90deg,transparent,#06080cf0 20%,#06080cf0 80%,transparent);border-block:2px solid var(--ult);text-align:center;box-shadow:0 0 70px color-mix(in srgb,var(--ult) 55%,transparent),inset 0 0 40px color-mix(in srgb,var(--ult) 25%,transparent);animation:ult-band 1.9s cubic-bezier(.16,.9,.2,1) both}
+.ult-cutin small{display:block;font-size:clamp(10px,1.2vw,14px);letter-spacing:.7em;color:var(--ult);font-weight:700}
+.ult-cutin strong{display:block;font-size:clamp(54px,11vw,150px);font-weight:900;font-style:italic;line-height:1.05;color:#fff;text-shadow:0 0 28px var(--ult),0 0 6px #fff,5px 5px 0 color-mix(in srgb,var(--ult) 60%,#000);animation:ult-title 1.9s cubic-bezier(.16,.9,.2,1) both}
+@keyframes ult-band{0%{transform:rotate(-7deg) translateX(110%)}13%{transform:rotate(-7deg) translateX(0)}80%{transform:rotate(-7deg) translateX(-2%)}100%{transform:rotate(-7deg) translateX(-115%)}}
+@keyframes ult-title{0%{letter-spacing:.6em;opacity:0;transform:scale(1.5)}16%{letter-spacing:.04em;opacity:1;transform:scale(1)}80%{letter-spacing:.08em}100%{letter-spacing:.08em}}
+.ult-speed{position:absolute;inset:-25%;pointer-events:none;background:repeating-conic-gradient(#fff0 0deg 2.1deg,color-mix(in srgb,var(--ult) 40%,#fff) 2.3deg 2.5deg,#fff0 2.7deg 4.6deg);-webkit-mask-image:radial-gradient(circle,transparent 30%,#000 72%);mask-image:radial-gradient(circle,transparent 30%,#000 72%);opacity:.55;animation:ult-speed .1s steps(2) infinite,ult-fade-in .4s ease-out both}
+@keyframes ult-speed{50%{transform:rotate(1.7deg) scale(1.04)}}@keyframes ult-fade-in{from{opacity:0}}
+.ult-impact{position:absolute;inset:0;pointer-events:none;animation:ult-flash .9s ease-out both;mix-blend-mode:screen}
+.ult-impact.long{animation-duration:2.4s}.ult-impact.soft{animation-name:ult-flash-soft;animation-duration:.45s}
+.ult-impact i{position:absolute;left:50%;top:50%;width:40vmax;height:40vmax;border-radius:50%;border:3vmax solid var(--ult);transform:translate(-50%,-50%) scale(.1);filter:blur(3px);animation:ult-ring .8s cubic-bezier(.1,.8,.3,1) both}
+.ult-impact.soft i{border-width:1vmax;animation-duration:.5s}
+@keyframes ult-flash{0%{background:#fff;opacity:1}10%{background:#fff;opacity:1}22%{background:var(--ult);opacity:.85}100%{background:var(--ult);opacity:0}}
+@keyframes ult-flash-soft{0%{background:#fff;opacity:.55}100%{background:var(--ult);opacity:0}}
+@keyframes ult-ring{to{transform:translate(-50%,-50%) scale(3.2);opacity:0;border-width:2px}}
+.ult-alarm{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 22vmin #ff1e0ccc;animation:ult-alarm .45s ease-in-out infinite alternate}
+@keyframes ult-alarm{from{opacity:.25}to{opacity:1}}
+.nuclear-cinematic:not(.is-impact) .meteor-letterbox{background:repeating-linear-gradient(-45deg,#eac66b 0 18px,#14110c 18px 36px);background-size:51px 100%;animation:ult-hazard .5s linear infinite}
+@keyframes ult-hazard{to{background-position:51px 0}}
+@media(prefers-reduced-motion:reduce){.ult-cutin,.ult-speed,.ult-impact,.ult-alarm{display:none}.nuclear-cinematic .meteor-letterbox{animation:none}}
