@@ -76,6 +76,7 @@ export function tickAttacks() {
       const due=Math.min(WEAPONS.draco.count,Math.max(0,Math.floor((age-WEAPONS.draco.firstImpact)/WEAPONS.draco.interval+1+1e-7)));
       const end=Math.min(due,hits+2);
       while(hits<end){detonate('draco',dracoPoint(dragon.point,hits),'');hits++;}
+      if(hits===WEAPONS.draco.count&&dragon.hits<hits){aim.kick=10;aim.shake=.9;if(state.sound)playImpact('draco-finale');}
     }else if(!hits&&age>=WEAPONS.ascent.impact){detonate('ascent',dragon.point,'');hits=1;}
     const total=dragon.skill==='draco'?WEAPONS.draco.count:1;
     if(hits!==dragon.hits)useGame.setState({rayquaza:{...dragon,hits}});

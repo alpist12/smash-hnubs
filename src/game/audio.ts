@@ -123,7 +123,7 @@ const on = () => { const c = audioContext(); return c && master && budget() ? c 
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {
-  const c = ['meteor','draco','ascent'].includes(type) || type.startsWith('rayquaza-') || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
+  const c = ['meteor','draco','draco-finale','ascent'].includes(type) || type.startsWith('rayquaza-') || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
   switch (type) {
     case 'bat': // 딱! 나무 배트 타격 + 묵직한 쿵
       noise(c, t, .06, 'bandpass', vary(2400), 900, .9, .001, 1.4);
@@ -139,6 +139,7 @@ export function playImpact(type: string) {
       if (type === 'rayquaza-draco') rayquazaNodes.push(
         ...riser(c, t + 8.8, 1.6, 110, 880),
         noise(c, t + 10.4, .9, 'highpass', 600, 6000, .45, .02, .8, wet), tone(c, t + 10.4, 1.2, 'sine', 300, 1800, .18, .02, wet),
+        ...boom(c, t + 11.4, .7), ...braam(c, t + 11.4, 4.2, 30.9),
         ...whoosh(c, t + 11.2, 1.1, .5),
       );
       else rayquazaNodes.push(tone(c, t + 8.8, 2.8, 'sawtooth', 55, 110, .06, 1.2, wet), ...riser(c, t + 9.9, 1.4, 90, 520), ...roar(c, t + 11.15, .9), ...riser(c, t + 11.6, .85, 200, 1600));
@@ -146,6 +147,8 @@ export function playImpact(type: string) {
     }
     case 'draco':
       boom(c, t, .75); break;
+    case 'draco-finale':
+      boom(c, t + .04, 1.5); braam(c, t, 3.4, 36.7); break;
     case 'ascent': {
       const { wet } = cinema(c);
       boom(c, t, 1.6); boom(c, t + .45, .9); braam(c, t + .02, 3.2, 36.7);

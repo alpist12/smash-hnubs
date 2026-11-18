@@ -53,7 +53,7 @@ export function Character({ profile }: { profile: CharacterProfile }) {
           targets.delete(ID); combo.current.reset(); if (profile.voice) stopCharacterVoice();
           if (aim.target === ID) { aim.target = ''; aim.holding = false; useGame.setState({ hovered: '' }); }
           setFallen(true); setStage(-1);
-          useGame.setState({ hint: `${profile.name}가 쓰러졌습니다. 잠시 후 퇴장하며 맵 복구로 다시 등장합니다.` });
+          useGame.setState({ hint: `${profile.name} K.O.! 곧 퇴장해요. [전부 복구]를 누르면 다시 돌아와요.` });
           return;
         }
         if (aim.target === ID) useGame.setState({ hovered: `${profile.name} · 누적 ${health.current.batHits} / ${CHARACTER_BAT_HITS}대 (배트 기준)` });

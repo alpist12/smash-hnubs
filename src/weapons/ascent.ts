@@ -1,1 +1,1 @@
-export default {id:'ascent',label:'레쿠쟈 · 화룡점정',short:'화룡점정',key:'7',power:1350,impulse:38,radius:5.8,impact:12.45,duration:16.5,cooldown:18,color:'#8fe6a5',description:'우주 강림 · 상승 후 조준 지점으로 초고속 급강하',knockback:9,lift:1.1} as const;
+export default {id:'ascent',label:'레쿠쟈 · 화룡점정',short:'화룡점정',key:'7',power:1350,impulse:38,radius:5.8,impact:12.45,duration:16.5,cooldown:18,color:'#8fe6a5',description:'레쿠쟈가 하늘 높이 솟구쳤다가 찍은 곳에 그대로 내리꽂혀요',knockback:9,lift:1.1} as const;
