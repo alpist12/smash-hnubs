@@ -1,0 +1,1 @@
+export default { id: 'snap', label: '타노스 · 핑거스냅', short: '핑거스냅', key: '8', power: 1_000_000, impulse: 0, radius: 100, cooldown: 20, color: '#e0b64a', description: '타노스가 손가락을 튕기면 벽·가구 할 것 없이 방송국의 절반이 가루가 돼요', knockback: 0, lift: 0, rise: 1.8, snapAt: 3.8, vanish: 3.2, duration: 9 } as const;

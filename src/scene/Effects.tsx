@@ -1,4 +1,5 @@
 import {Rayquaza} from './Rayquaza';
+import { Thanos } from './Thanos';
 import { WORLD } from '../data/studios';
 import { GRAPHICS } from './graphics';
 import { Meteor } from './Meteor';
@@ -213,13 +214,13 @@ export function Effects() {
     tickAttacks();
     if (cursor.current) {
       const normal = new Vector3(...aim.normal).normalize();
-      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = aim.active && !!aim.target && !useGame.getState().meteor && !useGame.getState().nuke && !useGame.getState().rayquaza;
+      cursor.current.position.lerp(new Vector3(...aim.point).addScaledVector(normal, .02), .4); cursor.current.visible = aim.active && !!aim.target && !useGame.getState().meteor && !useGame.getState().nuke && !useGame.getState().rayquaza && !useGame.getState().snap;
       cursor.current.quaternion.slerp(new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), normal), .35);
     }
     if (range.current) {
       const state = useGame.getState();
-      range.current.visible = state.ready && (weapon === 'nuke' || aim.active) && weapon !== 'bat' && !state.meteor && !state.nuke && !state.rayquaza;
-      if (weapon === 'nuke') range.current.position.set(0, .18, WORLD.centerZ);
+      range.current.visible = state.ready && (weapon === 'nuke' || weapon === 'snap' || aim.active) && weapon !== 'bat' && !state.meteor && !state.nuke && !state.rayquaza && !state.snap;
+      if (weapon === 'nuke' || weapon === 'snap') range.current.position.set(0, .18, WORLD.centerZ);
       else range.current.position.set(aim.point[0], aim.point[1] + .035, aim.point[2]);
     }
     if (performance.now() - lastCleanup.current > 1000) {
@@ -236,7 +237,7 @@ export function Effects() {
       <mesh><circleGeometry args={[.035, 16]} /><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.85} depthTest={false} side={2} /></mesh>
     </group>
     <group ref={range} rotation={[-Math.PI / 2, 0, 0]} visible={false} name="weapon-damage-range">
-      {weapon === 'nuke' ? <>
+      {weapon === 'nuke' || weapon === 'snap' ? <>
         <mesh><planeGeometry args={[WORLD.width, WORLD.depth]}/><meshBasicMaterial color={WEAPONS[weapon].color} transparent opacity={.06} depthTest={false} depthWrite={false} side={2}/></mesh>
         <lineLoop><bufferGeometry><bufferAttribute attach="attributes-position" args={[STATION_OUTLINE, 3]}/></bufferGeometry><lineBasicMaterial color={WEAPONS[weapon].color} depthTest={false}/></lineLoop>
       </> : <group scale={damageGuideRadius(weapon)}>
@@ -249,5 +250,6 @@ export function Effects() {
     <Meteor />
     <NuclearBlast />
     <Rayquaza />
+    <Thanos />
   </>;
 }

@@ -1,4 +1,5 @@
 import { dracoPoint } from '../data/rayquaza';
+import { pickHalf } from '../data/snap';
 import { beginOnlineRun } from '../game/leaderboard';
 import { Vector3 } from 'three';
 import { WEAPONS, type WeaponId } from '../weapons/config';
@@ -14,6 +15,7 @@ const lastShots = new Map<WeaponId, number>();
 let shotRound = -1;
 let nukeTargets: [string, Target][] = [];
 let nukeRound = -1;
+let snapQueue: { at: number; id: string; target: Target }[] = [];
 let missiles: { at: number; point: V3; round: number; target: string }[] = [];
 export const nextEffectId = () => ++serial;
 export function falloff(distance: number, radius: number) { return Math.max(0, 1 - distance / radius); }
@@ -38,10 +40,10 @@ export function attack(point: V3, selected = '') {
   const state = useGame.getState(), now = performance.now() / 1000;
   if (!state.ready) return;
   if (shotRound !== state.round) { lastShots.clear(); shotRound = state.round; }
-  if (state.rayquaza || state.nuke || ((state.weapon === 'draco' || state.weapon === 'ascent') && state.meteor) || (state.weapon === 'meteor' || state.weapon === 'nuke') && state.meteor) return;
+  if (state.rayquaza || state.snap || state.nuke || ((state.weapon === 'draco' || state.weapon === 'ascent') && state.meteor) || (state.weapon === 'meteor' || state.weapon === 'nuke') && state.meteor) return;
   const wait = WEAPONS[state.weapon].cooldown - (now - (lastShots.get(state.weapon) ?? -Infinity));
   if (wait > 0) {
-    if (['meteor','nuke','draco','ascent'].includes(state.weapon)) useGame.setState({ hint: `${WEAPONS[state.weapon].short} 재사용까지 ${wait.toFixed(1)}초` });
+    if (['meteor','nuke','draco','ascent','snap'].includes(state.weapon)) useGame.setState({ hint: `${WEAPONS[state.weapon].short} 재사용까지 ${wait.toFixed(1)}초` });
     return;
   }
   lastShots.set(state.weapon, now);
@@ -51,6 +53,11 @@ export function attack(point: V3, selected = '') {
   if (state.weapon === 'draco' || state.weapon === 'ascent') {
     useGame.setState({rayquaza:{id:nextEffectId(),point:[...point],born:now*1000,skill:state.weapon,hits:0}});
     if(state.sound)playImpact(`rayquaza-${state.weapon}`);
+  } else if (state.weapon === 'snap') {
+    // 타노스는 찍은 곳 바닥에 서서 카메라 쪽을 본다.
+    const yaw = Math.atan2(aim.camera[0] - point[0], aim.camera[2] - point[2]);
+    useGame.setState({ snap: { id: nextEffectId(), point: [point[0], 0, point[2]], born: now * 1000, yaw, fired: false }, hint: '' });
+    if (state.sound) playImpact('snap-arm');
   } else if (state.weapon === 'nuke') {
     useGame.setState({ nuke: { id: nextEffectId(), point: [0, 0, -5.75], born: now * 1000, impacted: false }, usedNuke: true, hint: '' });
     if (state.sound) playImpact('nuke-arm');
@@ -82,6 +89,21 @@ export function tickAttacks() {
     if(hits!==dragon.hits)useGame.setState({rayquaza:{...dragon,hits}});
     if(age>=config.duration&&hits===total)useGame.setState({rayquaza:null});
   }
+  const snapping = state.snap;
+  if (snapping && !snapping.fired && now * 1000 >= snapping.born + WEAPONS.snap.snapAt * 1000) {
+    // 사람(캐릭터)은 빼고 벽·가구·소품 전체에서 절반을 고른다.
+    const start = now;
+    snapQueue = pickHalf([...targets].filter(([id]) => !id.startsWith('character-'))).map(({ item: [id, target], at }) => ({ at: start + at, id, target }));
+    useGame.setState({ snap: { ...snapping, fired: true } });
+    aim.kick = 6; aim.shake = .25;
+    if (state.sound) playImpact('snap');
+  }
+  if (snapQueue.length) snapQueue = snapQueue.filter(entry => {
+    if (now < entry.at) return true;
+    if (targets.get(entry.id) === entry.target) entry.target.hit(WEAPONS.snap.power, [0, 0, 0], entry.target.point().toArray() as V3, 0, false, 'snap');
+    return false;
+  });
+  if (snapping?.fired && !snapQueue.length && now * 1000 >= snapping.born + WEAPONS.snap.duration * 1000) useGame.setState({ snap: null });
   const nuclear = state.nuke;
   if (nukeRound !== state.round) { nukeTargets = []; nukeRound = state.round; }
   if (nuclear && !nuclear.impacted && now * 1000 >= nuclear.born + WEAPONS.nuke.charge * 1000) {
@@ -116,4 +138,4 @@ export function tickAttacks() {
   if (strike && now * 1000 >= strike.born + (WEAPONS.meteor.flight + WEAPONS.meteor.aftermath) * 1000) useGame.setState({ meteor: null });
   if (aim.holding && state.weapon === 'laser') attack(aim.point, aim.target);
 }
-export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, meteor: null, nuke: null }); missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; aim.kick = 0; }
+export function clearAttacks() { lastShots.clear(); shotRound = -1; nukeTargets = []; nukeRound = -1; snapQueue = []; stopMeteorFall(); stopNuclear(); stopRayquaza(); useGame.setState({ rayquaza: null, snap: null, meteor: null, nuke: null }); missiles = []; aim.active = false; aim.holding = false; aim.last = -10; aim.shake = 0; aim.kick = 0; }

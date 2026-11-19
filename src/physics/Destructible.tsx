@@ -18,6 +18,7 @@ import { useGame } from '../game/store';
 import { useFrame } from '@react-three/fiber';
 import { wallVisible } from '../scene/wallVisibility';
 import { aim, attack, targets, nextEffectId } from './attacks';
+import { dissolve } from '../scene/SnapDust';
 
 // 충돌 그룹 (상위 16비트: 소속, 하위 16비트: 부딪히는 대상).
 // 가구=그룹1(전부와 충돌), 파편=그룹2(고정 바닥·벽(그룹4 포함)만 충돌) → 파편이 가구를 밀어 터뜨리지 않는다.
@@ -75,6 +76,18 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     const point = () => { const t = rb.translation(), r = rb.rotation(); return new Vector3(0, centerY * (item.scale ?? 1), 0).applyQuaternion(new Quaternion(r.x, r.y, r.z, r.w)).add(t); };
     const hit = (amount: number, impulse: V3, location: V3, maxSpeed = 3, fromContact = false, weapon?: WeaponId) => {
       if (broken.current || fromContact || amount < .1) return;
+      if (weapon === 'snap') {
+        // 핑거스냅: 부서지지 않고 그 자리에서 가루가 되어 흩어진다.
+        broken.current = true; targets.delete(item.id);
+        if (aim.target === item.id) { aim.target = ''; useGame.setState({ hovered: '' }); }
+        if (!useGame.getState().destroy(item.id, spec.score)) return;
+        const visible = shown.current && (item.kind !== 'light' || useGame.getState().ceiling);
+        if (visible) {
+          const t = rb.translation(), r = rb.rotation(), pieces = piecesRef.current;
+          dissolve(pieces ? pieces.filter((_, i) => !removedRef.current.includes(i)) : parts, new Quaternion(r.x, r.y, r.z, r.w), new Vector3(t.x, t.y, t.z), item.scale ?? 1, chipColors);
+        }
+        setStage(4); return;
+      }
       // 접촉은 Rapier 이동만 처리한다. 무기 명중만 조각을 제거한다.
       const nuclear = weapon === 'nuke';
       if (item.kind === 'light' && !useGame.getState().ceiling && !nuclear) return;
@@ -155,7 +168,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
     };
     targets.set(item.id, { point, hit });
     return () => { targets.delete(item.id); };
-  }, [item, parts, round, spec, inside, mainFinish]);
+  }, [item, parts, round, spec, inside, mainFinish, chipColors]);
 
   function onAim(e: ThreeEvent<PointerEvent>) {
     if (!shown.current) return;

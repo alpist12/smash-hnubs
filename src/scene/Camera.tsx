@@ -11,6 +11,7 @@ import { STUDIOS, WORLD } from '../data/studios';
 import { CHARACTERS } from '../data/characters';
 import { ROOM } from '../data/room';
 import { nuclearFrame } from '../data/nuclear';
+import { snapFrame } from '../data/snap';
 import { meteorPosition, meteorProgress } from '../data/meteor';
 
 export function CameraRig() {
@@ -69,8 +70,8 @@ export function CameraRig() {
     if (!controls.current) return;
     camera.position.sub(previousShake.current); previousShake.current.set(0, 0, 0);
     const strike = useGame.getState().meteor, nuclear = useGame.getState().nuke;
-    const dragon = useGame.getState().rayquaza;
-    const activeStrike = strike || nuclear || dragon;
+    const dragon = useGame.getState().rayquaza, snapping = useGame.getState().snap;
+    const activeStrike = strike || nuclear || dragon || snapping;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!reduced && (activeStrike || cinematic.current)) {
       const c = controls.current;
@@ -85,6 +86,9 @@ export function CameraRig() {
         desired=new Vector3(...frame.camera);target=new Vector3(...frame.target);fov=frame.fov;
         const entry=Math.min(1,(performance.now()-dragon.born)/1000/1.2),blend=entry*entry*(3-2*entry);
         desired.lerpVectors(saved.position,desired.clone(),blend);target.lerpVectors(saved.target,target.clone(),blend);fov=saved.fov+(fov-saved.fov)*blend;
+      } else if (snapping) {
+        const age = (performance.now() - snapping.born) / 1000, frame = snapFrame(age, snapping, size.width < size.height), entry = Math.min(1, age / 1.1), blend = entry * entry * (3 - 2 * entry);
+        desired = saved.position.clone().lerp(new Vector3(...frame.camera), blend); target = saved.target.clone().lerp(new Vector3(...frame.target), blend);
       } else if (nuclear) {
         const frame = nuclearFrame((performance.now()-nuclear.born)/1000, nuclear.point, size.width<size.height);
         desired = new Vector3(...frame.camera); target = new Vector3(...frame.target);

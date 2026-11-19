@@ -8,6 +8,8 @@ import type { Finish } from '../data/types';
 let ctx: AudioContext | undefined, master: GainNode | undefined, noiseBuffer: AudioBuffer | undefined;
 let recent: number[] = [];
 let rayquazaNodes:AudioScheduledSourceNode[]=[];
+let snapNodes:AudioScheduledSourceNode[]=[];
+export function stopSnap(){for(const node of snapNodes){try{node.stop();}catch{/* 이미 끝난 노드 */}}snapNodes=[];}
 export function stopRayquaza(){for(const node of rayquazaNodes){try{node.stop();}catch{/* 이미 끝난 노드 */}}rayquazaNodes=[];}
 let nuclearNodes: AudioScheduledSourceNode[] = [];
 export function stopNuclear() { for (const node of nuclearNodes) { try { node.stop(); } catch { /* 이미 끝난 노드 */ } } nuclearNodes = []; }
@@ -123,7 +125,7 @@ const on = () => { const c = audioContext(); return c && master && budget() ? c 
 
 /** 무기 발사·명중음. */
 export function playImpact(type: string) {
-  const c = ['meteor','draco','draco-finale','ascent'].includes(type) || type.startsWith('rayquaza-') || type.startsWith('nuke') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
+  const c = ['meteor','draco','draco-finale','ascent'].includes(type) || type.startsWith('rayquaza-') || type.startsWith('nuke') || type.startsWith('snap') ? audioContext() : on(); if (!c) return; const t = c.currentTime;
   switch (type) {
     case 'bat': // 딱! 나무 배트 타격 + 묵직한 쿵
       noise(c, t, .06, 'bandpass', vary(2400), 900, .9, .001, 1.4);
@@ -153,6 +155,17 @@ export function playImpact(type: string) {
       const { wet } = cinema(c);
       boom(c, t, 1.6); boom(c, t + .45, .9); braam(c, t + .02, 3.2, 36.7);
       tone(c, t, 2.4, 'sine', 1800, 900, .12, .005, wet); tone(c, t, 2.4, 'sine', 2700, 1350, .07, .005, wet); break;
+    }
+    case 'snap-arm': { // 포털이 열리고 타이탄이 솟아오른다.
+      stopSnap(); const { wet } = cinema(c);
+      snapNodes.push(...whoosh(c, t, 1.4, .4), ...braam(c, t + .25, 3.2, 41.2), ...riser(c, t + 1.8, 2, 70, 520), tone(c, t, 3.8, 'sine', 33, 44, .3, 1, wet));
+      break;
+    }
+    case 'snap': { // 딱! 손가락 소리 뒤로 공허한 울림과 바람.
+      const { wet } = cinema(c);
+      noise(c, t, .035, 'highpass', 2600, 5200, 1, .001, 1.6); tone(c, t, .05, 'triangle', 1900, 900, .5, .001);
+      snapNodes.push(...braam(c, t + .08, 4.5, 27.5), tone(c, t + .05, 3, 'sine', 1320, 1240, .08, .02, wet), noise(c, t + .4, 4.2, 'bandpass', 500, 2400, .3, 1.8, .6, wet));
+      break;
     }
     case 'nuke-arm': {
       stopNuclear(); const { wet } = cinema(c);
