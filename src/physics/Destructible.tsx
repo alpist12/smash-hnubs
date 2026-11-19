@@ -17,7 +17,7 @@ import { PartMesh } from '../scene/PartMesh';
 import { useGame } from '../game/store';
 import { useFrame } from '@react-three/fiber';
 import { wallVisible } from '../scene/wallVisibility';
-import { aim, attack, targets, nextEffectId } from './attacks';
+import { aim, attack, targets, nextEffectId, wakeAround } from './attacks';
 import { dissolve } from '../scene/SnapDust';
 
 // 충돌 그룹 (상위 16비트: 소속, 하위 16비트: 부딪히는 대상).
@@ -86,7 +86,7 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
           const t = rb.translation(), r = rb.rotation(), pieces = piecesRef.current;
           dissolve(pieces ? pieces.filter((_, i) => !removedRef.current.includes(i)) : parts, new Quaternion(r.x, r.y, r.z, r.w), new Vector3(t.x, t.y, t.z), item.scale ?? 1, chipColors);
         }
-        setStage(4); return;
+        wakeAround(point()); setStage(4); return;
       }
       // 접촉은 Rapier 이동만 처리한다. 무기 명중만 조각을 제거한다.
       const nuclear = weapon === 'nuke';
@@ -164,9 +164,10 @@ export const Destructible = memo(function Destructible({ item }: { item: Item })
         return { id: nextEffectId(), part: { ...shaped, pos: [0, 0, 0], rotation: undefined }, pos: p.toArray() as V3, rotation: rotQ.toArray(), impulse: [kick.x + Math.max(-1.5, Math.min(1.5, impulse[0] * .06)), kick.y + .4, kick.z + Math.max(-1.5, Math.min(1.5, impulse[2] * .06))], mass: Math.max(.1, spec.mass / major.length), born: performance.now() + index };
       });
       useGame.getState().addDebris(debris);
+      wakeAround(point());
       setStage(4);
     };
-    targets.set(item.id, { point, hit });
+    targets.set(item.id, { point, hit, wake: item.fixed ? undefined : () => rb.wakeUp() });
     return () => { targets.delete(item.id); };
   }, [item, parts, round, spec, inside, mainFinish, chipColors]);
 

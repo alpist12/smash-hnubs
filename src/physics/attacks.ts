@@ -7,7 +7,7 @@ import { useGame } from '../game/store';
 import { audioContext, playImpact, stopMeteorFall, stopNuclear, stopRayquaza } from '../game/audio';
 import type { V3 } from '../data/types';
 
-export interface Target { point: () => Vector3; facing?: () => number; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean, weapon?: WeaponId) => void }
+export interface Target { point: () => Vector3; facing?: () => number; /** 잠든 물리 바디를 깨운다(받침이 사라졌을 때). */ wake?: () => void; hit: (damage: number, impulse: V3, point: V3, maxSpeed?: number, fromContact?: boolean, weapon?: WeaponId) => void }
 export const targets = new Map<string, Target>();
 export const aim = { active: false, point: [0, .78, .4] as V3, target: '', holding: false, last: -10, shake: 0, kick: 0, camera: [8, 8.5, 10.5] as V3, normal: [0, 1, 0] as V3 };
 let serial = 0;
@@ -21,6 +21,12 @@ let snapPeople: { at: number; id: string; target: Target; focused: boolean }[] =
 const patchSnap = (patch: Partial<NonNullable<ReturnType<typeof useGame.getState>['snap']>>) => { const s = useGame.getState().snap; if (s) useGame.setState({ snap: { ...s, ...patch } }); };
 let missiles: { at: number; point: V3; round: number; target: string }[] = [];
 export const nextEffectId = () => ++serial;
+/** 사라진 물체 주변에 잠들어 있던 물건을 깨워, 받침이 없어지면 실제로 떨어지게 한다. */
+export function wakeAround(point: Vector3, radius = 2.2) {
+  const run = () => { for (const target of targets.values()) if (target.wake && target.point().distanceTo(point) < radius) target.wake(); };
+  // 받침 콜라이더가 지워진 다음 프레임에 한 번 더 깨워 다시 잠들지 않게 한다.
+  run(); requestAnimationFrame(run); setTimeout(run, 150);
+}
 export function falloff(distance: number, radius: number) { return Math.max(0, 1 - distance / radius); }
 
 function detonate(weapon: WeaponId, point: V3, selected: string) {
