@@ -8,6 +8,7 @@ import { HitCombo, VOICE_STAGES } from '../game/hitCombo';
 import { CharacterHealth, CHARACTER_BAT_HITS } from '../game/characterHealth';
 import { playCharacterVoice, prepareCharacterVoice, stopCharacterVoice } from '../game/characterVoice';
 import { aim, attack, targets } from '../physics/attacks';
+import { dissolve } from './SnapDust';
 import type { V3 } from '../data/types';
 import { CharacterView } from './CharacterView';
 import { CHARACTER_MASS, CHARACTER_EXIT_DELAY, CHARACTER_RECOVER_DELAY, kickCharacter, steadyCharacter } from '../physics/characterMotion';
@@ -39,6 +40,23 @@ export function Character({ profile }: { profile: CharacterProfile }) {
       },
       hit: (amount, impulse, _point, speed, fromContact, weapon) => {
         if (health.current.gone || fromContact || amount < 1) return;
+        if (weapon === 'snap') {
+          // 핑거스냅: 쓰러지지 않고 그 자리에서 가루가 되어 사라진다.
+          health.current.hit(1e9);
+          targets.delete(ID); combo.current.reset(); if (profile.voice) stopCharacterVoice();
+          if (aim.target === ID) { aim.target = ''; aim.holding = false; useGame.setState({ hovered: '' }); }
+          const rb = body.current;
+          if (rb) {
+            const t = rb.translation(), r = rb.rotation(), h = profile.height;
+            dissolve([
+              { name: 'head', pos: [0, h - .12, 0], size: [.18, .22, .2], finish: 'fabric', color: '#d8a886' },
+              { name: 'body', pos: [0, h * .62, 0], size: [.4, h * .34, .22], finish: 'fabric', color: '#8d8a86' },
+              { name: 'legs', pos: [0, h * .23, 0], size: [.3, h * .46, .18], finish: 'fabric', color: '#4a4d54' },
+            ], new Quaternion(r.x, r.y, r.z, r.w), new Vector3(t.x, t.y, t.z), 1, ['#8d8a86', '#d8a886', '#4a4d54'], { count: 420, grain: .016 });
+          }
+          setStage(-1); setGone(true);
+          return;
+        }
         const before = health.current.batHits, now = performance.now();
         const down = health.current.hit(amount);
         const stumble = weapon === 'bat' || Math.floor(health.current.batHits / 5) > Math.floor(before / 5) || (speed ?? 0) > 3 || now < recoverAt.current;

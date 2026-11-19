@@ -1,7 +1,7 @@
 import snap from '../weapons/snap';
 import type { V3 } from './types';
 import { WORLD } from './studios';
-export interface SnapStrike { id: number; point: V3; born: number; yaw: number; fired: boolean }
+export interface SnapStrike { id: number; point: V3; born: number; yaw: number; fired: boolean; flashed: boolean; /** 사람 차례로 늘어난 시간(초) */ extra: number; /** 지금 사라지는 사람의 위치 */ focus: V3 | null }
 /** 무작위로 절반(홀수면 올림)을 골라, 사라질 시각(스냅 뒤 0~vanish초)을 붙인다. */
 export function pickHalf<T>(list: T[], random = Math.random) {
   const shuffled = [...list];
@@ -19,6 +19,11 @@ export function snapFrame(age: number, strike: SnapStrike, portrait = false) {
   const body = at(.6, 1.75, range), bodyTarget = at(0, 1.4, 0), side = at(1.55, 2.12, 1.05), handTarget = at(.5, 2.02, .42);
   const close = body.map((v, i) => v + (side[i] - v) * hand) as V3, closeTarget = bodyTarget.map((v, i) => v + (handTarget[i] - v) * hand) as V3;
   const wide: V3 = [x * .3 + 9, 13, WORLD.centerZ + (portrait ? 26 : 17)], wideTarget: V3 = [0, .6, WORLD.centerZ];
-  const t = smooth((age - snap.snapAt - .35) / 1.4);
+  const t = smooth((age - snap.snapAt - snap.flash - .3) / 1.4);
+  if (strike.focus) {
+    // 사람이 사라질 때는 방송국 전체 시점 쪽에서 그 사람을 가까이 잡는다.
+    const [fx, fy, fz] = strike.focus, dx = wide[0] - fx, dz = wide[2] - fz, d = Math.hypot(dx, dz) || 1, r = portrait ? 3.4 : 2.5;
+    return { camera: [fx + dx / d * r, fy + .55, fz + dz / d * r] as V3, target: [fx, fy - .05, fz] as V3 };
+  }
   return { camera: close.map((v, i) => v + (wide[i] - v) * t) as V3, target: closeTarget.map((v, i) => v + (wideTarget[i] - v) * t) as V3 };
 }

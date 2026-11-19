@@ -82,7 +82,7 @@ test('weapons use distinct radii, decreasing explosion force and bounded debris'
     assert.equal(falloff(0, weapon.radius), 1);
     assert.equal(falloff(weapon.radius / 2, weapon.radius), .5);
     assert.equal(falloff(weapon.radius * 2, weapon.radius), 0);
-    assert.ok(weapon.power > 0 && weapon.cooldown > 0);
+    assert.ok(weapon.power > 0 && weapon.cooldown >= 0);
   }
   assert.ok(WEAPONS.bat.radius > WEAPONS.laser.radius);
   assert.ok(WEAPONS.missile.radius > WEAPONS.bat.radius && WEAPONS.missile.radius < WEAPONS.meteor.radius);

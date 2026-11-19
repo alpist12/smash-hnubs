@@ -21,10 +21,10 @@ const smooth = (n: number) => { const t = Math.max(0, Math.min(1, n)); return t 
  * 세워진 포털: 타노스 뒤에서 열려 앞으로 지나가며 몸을 드러내고(등장),
  * 끝에 앞에서 다시 열려 뒤로 지나가며 몸을 지운다(퇴장). 포털이 지나간 쪽(뒤)만 보인다.
  */
-export function portalState(age: number) {
-  const exitAt = snap.duration - 2.4;
+export function portalState(age: number, extra = 0) {
+  const exitAt = snap.duration + extra - 2.4;
   const enter = smooth((age - .5) / (snap.rise - .5)), exit = smooth((age - exitAt - .4) / 1.5);
-  const open = Math.min(smooth(age / .5), 1 - smooth((age - snap.rise) / .4)) + Math.min(smooth((age - exitAt) / .4), 1 - smooth((age - snap.duration + .5) / .4));
+  const open = Math.min(smooth(age / .5), 1 - smooth((age - snap.rise) / .4)) + Math.min(smooth((age - exitAt) / .4), 1 - smooth((age - snap.duration - extra + .5) / .4));
   return { open, z: BACK + (FRONT - BACK) * (enter - exit) };
 }
 /**
@@ -32,7 +32,7 @@ export function portalState(age: number) {
  * 값은 Blender에서 엄지 쪽 옆모습으로 렌더해 맞춘 각도다.
  */
 export function fingerPose(age: number): Record<Finger, [number, number]> {
-  const t = age - snap.snapAt, curl = smooth((t + 1.7) / .5), press = smooth((t + 1.3) / .6), flick = t < 0 ? 0 : Math.min(1, t / .06), relax = 1 - smooth((t - 1.6) / .7);
+  const t = age - snap.snapAt, curl = smooth((t + 1.7) / .5), press = smooth((t + 1.3) / .6), flick = t < 0 ? 0 : smooth(t / .1), relax = 1 - smooth((t - 2) / .7);
   const shake = t > -.7 && t < 0 ? Math.sin(t * 90) * .025 : 0, overshoot = t > 0 ? Math.sin(Math.min(1, t / .25) * Math.PI) * .12 : 0;
   return {
     Middle: [(-.6 * press + shake - 1.05 * flick - overshoot) * relax, 0],
@@ -52,7 +52,7 @@ function Titan({ strike }: { strike: SnapStrike }) {
     const box = new Box3().setFromObject(model), size = box.getSize(new Vector3()), center = box.getCenter(new Vector3()), scale = HEIGHT / size.y;
     model.traverse(o => {
       const mesh = o as Mesh; if (!mesh.isMesh) return;
-      mesh.castShadow = true; mesh.frustumCulled = false;
+      mesh.castShadow = false; mesh.frustumCulled = false;
       mesh.material = (mesh.material as Material).clone(); mesh.material.clippingPlanes = [clip]; mesh.material.clipShadows = true;
     });
     // 손가락 본: 모델 공간 회전(Blender에서 맞춘 각도)을 본 로컬 회전으로 바꾸기 위해 쉬는 자세를 기억한다.
@@ -65,12 +65,12 @@ function Titan({ strike }: { strike: SnapStrike }) {
     const age = (performance.now() - strike.born) / 1000, forward = new Vector3(Math.sin(strike.yaw), 0, Math.cos(strike.yaw));
     root.current?.position.set(strike.point[0], 0, strike.point[2]);
     // 포털 평면보다 뒤쪽(포털이 이미 지나간 쪽)만 남긴다.
-    const portal = new Vector3(...strike.point).addScaledVector(forward, portalState(age).z);
+    const portal = new Vector3(...strike.point).addScaledVector(forward, portalState(age, strike.extra).z);
     rig.clip.setFromNormalAndCoplanarPoint(forward.clone().negate(), portal);
     const pose = fingerPose(age);
     for (const b of rig.bones) { const [x, z] = pose[b.name]; turn.setFromEuler(angles.set(x, 0, z)); b.bone.quaternion.copy(b.rest).multiply(b.inverse).multiply(turn).multiply(b.world); }
     // 튕긴 손끝에서 작은 금빛 파열이 터진다.
-    if (spark.current) { const t = age - snap.snapAt, on = t >= 0 && t < .45; spark.current.visible = on; if (on) { spark.current.scale.setScalar(.04 + t * .9); spark.current.children.forEach(c => { ((c as Mesh).material as MeshBasicMaterial).opacity = 1 - t / .45; }); spark.current.quaternion.copy(camera.quaternion); } }
+    if (spark.current) { const t = age - snap.snapAt - .04, on = t >= 0 && t < .45; spark.current.visible = on; if (on) { spark.current.scale.setScalar(.04 + t * .9); spark.current.children.forEach(c => { ((c as Mesh).material as MeshBasicMaterial).opacity = 1 - t / .45; }); spark.current.quaternion.copy(camera.quaternion); } }
     // 튕기는 순간 건틀릿이 금빛으로 번쩍인다.
     if (light.current) { const t = age - snap.snapAt; light.current.intensity = t < -.6 ? 0 : t < 0 ? (t + .6) * 8 : 30 * Math.exp(-t * 2.5); }
   });
@@ -87,7 +87,7 @@ function Titan({ strike }: { strike: SnapStrike }) {
 function Portal({ strike }: { strike: SnapStrike }) {
   const group = useRef<Group>(null), swirl = useRef<Group>(null), glow = useRef<PointLight>(null);
   useFrame(() => {
-    const age = (performance.now() - strike.born) / 1000, { open, z } = portalState(age);
+    const age = (performance.now() - strike.born) / 1000, { open, z } = portalState(age, strike.extra);
     if (!group.current) return;
     group.current.visible = open > .01; group.current.position.z = z;
     group.current.scale.set(Math.max(.01, open) * .9, Math.max(.01, open), 1);

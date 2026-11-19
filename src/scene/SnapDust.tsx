@@ -6,7 +6,7 @@ import { useGame } from '../game/store';
 
 /** 핑거스냅 가루. 모든 물체가 하나의 InstancedMesh 링 버퍼를 같이 쓴다. */
 // ponytail: 오래된 가루부터 덮어쓰는 고정 풀, 동시에 더 많이 필요하면 MAX를 늘린다.
-const MAX = 16000, LIFE = 2.4, ASH = ['#5d554e', '#8a8077', '#3b3530'];
+const MAX = 9000, LIFE = 2.4, ASH = ['#5d554e', '#8a8077', '#3b3530'];
 const QUALITY = { low: .3, medium: .6, high: 1 } as const;
 const start = new Float32Array(MAX * 3), drift = new Float32Array(MAX * 3), timing = new Float32Array(MAX * 2), sizes = new Float32Array(MAX);
 const colors = new Float32Array(MAX * 3);
@@ -14,11 +14,11 @@ let cursor = 0, lastSpawn = -1e9, dirty = false;
 const color = new Color(), local = new Vector3(), rotation = new Quaternion(), euler = new Euler();
 
 /** 물체 부품의 부피 안에 가루를 채우고, 한쪽에서부터 바람에 날리게 한다. */
-export function dissolve(parts: Part[], q: Quaternion, origin: Vector3, scale: number, palette: string[]) {
+export function dissolve(parts: Part[], q: Quaternion, origin: Vector3, scale: number, palette: string[], fine?: { count: number; grain: number }) {
   const now = performance.now() / 1000, factor = QUALITY[useGame.getState().quality];
   const area = parts.map(p => 2 * (p.size[0] * p.size[1] + p.size[1] * p.size[2] + p.size[0] * p.size[2]) * scale * scale);
-  const total = area.reduce((a, b) => a + b, 0) || 1, count = Math.round(Math.min(260, Math.max(16, total * 25)) * factor);
-  const grain = Math.min(.07, Math.max(.018, Math.sqrt(total / count) * .45));
+  const total = area.reduce((a, b) => a + b, 0) || 1, count = Math.round((fine?.count ?? Math.min(180, Math.max(12, total * 18))) * factor);
+  const grain = fine?.grain ?? Math.min(.07, Math.max(.018, Math.sqrt(total / count) * .45));
   const wind = new Vector3(.9 + Math.random() * .4, .45, (Math.random() - .5) * .6), side = new Vector3(1, 0, 0).applyQuaternion(q);
   const reach = Math.max(...parts.map(p => Math.abs(p.pos[0]) + p.size[0] / 2), .1) * scale;
   for (let n = 0; n < count; n++) {
