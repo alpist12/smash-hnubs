@@ -1,6 +1,7 @@
 import { Component, Suspense, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
+import { DRACO } from './draco';
 import { Box3, Group, Quaternion, Vector3, type Mesh, type Object3D } from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { CharacterProfile } from '../data/characters';
@@ -29,7 +30,7 @@ function bone(model: Object3D, name: string) {
 }
 
 function GltfCharacter({ url, height, motion }: { url: string; height: number; motion?: Motion }) {
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(url, DRACO);
   const root = useRef<Group>(null), gait = useRef(new CharacterGait());
   // 원본 크기·원점이 제각각이라 키 height, 발 y=0, 가로 중심 원점으로 맞춘다. 정면은 +Z 기준.
   const { model, scale, offset, rig } = useMemo(() => {

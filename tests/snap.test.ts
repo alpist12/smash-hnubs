@@ -44,3 +44,13 @@ test('the snap dusts half of everything, people included, with no cooldown', () 
     attack([0, 0, 0]); assert.ok(useGame.getState().snap); assert.equal(useGame.getState().hint, '');
   } finally { clearAttacks(); targets.clear(); Object.defineProperty(globalThis, 'performance', original); }
 });
+
+test('models load fast on phones: Draco-compressed with a local decoder', async () => {
+  const { readFile, stat } = await import('node:fs/promises');
+  for (const [path, limit] of [['public/models/thanos/thanos.glb', 3e6], ['public/characters/wonjae.glb', 1.5e6], ['public/characters/yujin.glb', 1.5e6]] as const) {
+    const bytes = await readFile(path), json = JSON.parse(bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12)));
+    assert.ok(bytes.length < limit, `${path} is ${bytes.length} bytes`);
+    assert.ok(json.extensionsRequired?.includes('KHR_draco_mesh_compression'), path);
+  }
+  for (const file of ['draco_decoder.wasm', 'draco_wasm_wrapper.js']) assert.ok((await stat(`public/draco/${file}`)).size > 0);
+});

@@ -10,6 +10,7 @@ import { stopSnap } from '../game/audio';
 import snap from '../weapons/snap';
 import type { SnapStrike } from '../data/snap';
 import { SnapDust } from './SnapDust';
+import { DRACO } from './draco';
 
 const URL = `${import.meta.env.BASE_URL}models/thanos/thanos.glb`, HEIGHT = 2.5;
 /** 포털이 지나가는 앞뒤 위치(타노스 기준 앞쪽 +). 몸 두께(±0.5m)를 완전히 덮는다. */
@@ -44,7 +45,7 @@ export function fingerPose(age: number): Record<Finger, [number, number]> {
 }
 
 function Titan({ strike }: { strike: SnapStrike }) {
-  const gltf = useGLTF(URL), root = useRef<Group>(null), light = useRef<PointLight>(null), spark = useRef<Group>(null), gl = useThree(s => s.gl), camera = useThree(s => s.camera);
+  const gltf = useGLTF(URL, DRACO), root = useRef<Group>(null), light = useRef<PointLight>(null), spark = useRef<Group>(null), gl = useThree(s => s.gl), camera = useThree(s => s.camera);
   const rig = useMemo(() => {
     // 스키닝된 건틀릿은 SkeletonUtils로 복제해야 본이 새 복제본에 묶인다.
     const model = cloneSkinned(gltf.scene), clip = new Plane();
@@ -115,6 +116,6 @@ function Sequence({ strike }: { strike: SnapStrike }) {
 }
 export function Thanos() {
   const strike = useGame(s => s.snap), weapon = useGame(s => s.weapon);
-  useEffect(() => { if (weapon === 'snap') useGLTF.preload(URL); }, [weapon]);
+  useEffect(() => { if (weapon === 'snap') useGLTF.preload(URL, DRACO); }, [weapon]);
   return <><SnapDust />{strike && <Sequence key={strike.id} strike={strike} />}</>;
 }
